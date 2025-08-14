@@ -54,7 +54,10 @@ class FlinkDocPipeline:
         # Save Markdown
         out_dir = os.path.join("output", item['version'])
         os.makedirs(out_dir, exist_ok=True)
-        filename = os.path.join(out_dir, f"{self.slugify(item['title'])}.md")
+        # Create filename from title, version, and timestamp
+        title_slug = self.slugify(item['title'])
+        timestamp = item['crawl_timestamp'].replace(" ", "_").replace(":", "-")
+        filename = os.path.join(out_dir, f"flink-{item['version']}_{title_slug}_{timestamp}.md")
         with open(filename, "w", encoding="utf-8") as f:
             f.write(item['markdown_content'])
 
@@ -65,4 +68,3 @@ class FlinkDocPipeline:
 
     def close_spider(self, spider):
         self.conn.close()
-
