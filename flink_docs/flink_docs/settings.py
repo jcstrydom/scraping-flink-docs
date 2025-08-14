@@ -1,7 +1,7 @@
 BOT_NAME = "flink_docs"
 SPIDER_MODULES = ["flink_docs.spiders"]
 NEWSPIDER_MODULE = "flink_docs.spiders"
-ROBOTSTXT_OBEY = True
+ROBOTSTXT_OBEY = False
 DOWNLOAD_DELAY = 1
 CONCURRENT_REQUESTS = 2
 
