@@ -52,7 +52,7 @@ class FlinkDocPipeline:
         self.conn.commit()
 
         # Save Markdown
-        out_dir = os.path.join("output", item['version'])
+        out_dir = os.path.join("content", item['version'])
         os.makedirs(out_dir, exist_ok=True)
         # Create filename from title, version, and timestamp
         title_slug = self.slugify(item['title'])
