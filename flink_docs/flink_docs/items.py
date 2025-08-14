@@ -14,3 +14,4 @@ class FlinkDocItem(scrapy.Item):
     provenance = scrapy.Field()
     child_links = scrapy.Field()  # list of URLs
     content_md_path = scrapy.Field()  # path to saved markdown file
+    markdown_content = scrapy.Field()  # markdown content as string

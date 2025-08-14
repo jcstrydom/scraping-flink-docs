@@ -14,6 +14,7 @@ class FlinkSpider(scrapy.Spider):
     ]
 
     def parse(self, response):
+        self.logger.info(f"Parsing URL: {response.url}")
         soup = BeautifulSoup(response.text, "html.parser")
 
         # Detect version
@@ -36,7 +37,7 @@ class FlinkSpider(scrapy.Spider):
         child_links = [a['href'] for a in soup.find_all("a", href=True)
                        if a['href'].startswith("http") and "flink" in a['href']]
 
-        yield FlinkDocItem(
+        item = FlinkDocItem(
             title=title_text,
             url=response.url,
             version=version,
@@ -46,6 +47,8 @@ class FlinkSpider(scrapy.Spider):
             child_links=child_links,
             markdown_content=markdown_content
         )
+        self.logger.info(f"Yielding item: {item}")
+        yield item
 
     def html_to_markdown(self, container):
         lines = []
