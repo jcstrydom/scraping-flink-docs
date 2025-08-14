@@ -13,9 +13,9 @@ FEEDS = {
     },
 }
 
-# Keep the pipeline for database storage (optional)
-ITEM_PIPELINES = {
-    "flink_docs.pipelines.FlinkDocPipeline": 300,
-}
+# Keep the pipeline for database storage (optional) - temporarily disabled
+# ITEM_PIPELINES = {
+#     "flink_docs.pipelines.FlinkDocPipeline": 300,
+# }
 
 LOG_LEVEL = "INFO"

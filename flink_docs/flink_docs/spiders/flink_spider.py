@@ -44,18 +44,20 @@ class FlinkSpider(scrapy.Spider):
                 base_url = "/".join(response.url.split("/")[:3])
                 child_links.append(base_url + href)
 
-        item = FlinkDocItem(
-            title=title_text,
-            url=response.url,
-            version=version,
-            crawl_run=datetime.now().strftime("%Y%m%d_poc"),
-            crawl_timestamp=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            provenance=response.url.split("/")[2],
-            child_links=child_links,
-            markdown_content=markdown_content
-        )
-        self.logger.info(f"Yielding item: {item}")
+        item = FlinkDocItem()
+        item['title'] = title_text
+        item['url'] = response.url
+        item['version'] = version
+        item['crawl_run'] = datetime.now().strftime("%Y%m%d_poc")
+        item['crawl_timestamp'] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        item['provenance'] = response.url.split("/")[2]
+        item['child_links'] = child_links
+        item['markdown_content'] = markdown_content
+        
+        self.logger.info(f"About to yield item with title: {title_text}")
+        self.logger.info(f"Item keys: {list(item.keys())}")
         yield item
+        self.logger.info(f"Item yielded successfully")
 
     def html_to_markdown(self, container):
         lines = []
