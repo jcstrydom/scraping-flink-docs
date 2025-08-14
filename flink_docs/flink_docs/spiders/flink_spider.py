@@ -34,8 +34,15 @@ class FlinkSpider(scrapy.Spider):
         markdown_content = self.html_to_markdown(content_div)
 
         # Extract child links
-        child_links = [a['href'] for a in soup.find_all("a", href=True)
-                       if a['href'].startswith("http") and "flink" in a['href']]
+        child_links = []
+        for a in soup.find_all("a", href=True):
+            href = a['href']
+            if href.startswith("http") and "flink" in href:
+                child_links.append(href)
+            elif href.startswith("/") and not href.startswith("//"):
+                # Convert relative URLs to absolute
+                base_url = "/".join(response.url.split("/")[:3])
+                child_links.append(base_url + href)
 
         item = FlinkDocItem(
             title=title_text,
@@ -52,23 +59,39 @@ class FlinkSpider(scrapy.Spider):
 
     def html_to_markdown(self, container):
         lines = []
-        for el in container.descendants:
+        processed_elements = set()
+
+        for el in container.find_all(['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'pre', 'table', 'blockquote']):
+            if id(el) in processed_elements:
+                continue
+            processed_elements.add(id(el))
+
             if el.name and el.name.startswith("h") and el.name[1].isdigit():
                 level = int(el.name[1])
-                lines.append("#" * level + " " + el.get_text(strip=True))
+                text = el.get_text(strip=True)
+                if text:
+                    lines.append("#" * level + " " + text)
             elif el.name == "p":
-                lines.append(el.get_text(strip=True))
-            elif el.name == "code" and el.parent.name == "pre":
-                lines.append("```")
-                lines.append(el.get_text())
-                lines.append("```")
+                text = el.get_text(strip=True)
+                if text:
+                    lines.append(text)
+            elif el.name == "pre":
+                code_text = el.get_text()
+                if code_text.strip():
+                    lines.append("```")
+                    lines.append(code_text)
+                    lines.append("```")
             elif el.name == "table":
                 rows = []
                 for row in el.find_all("tr"):
                     cols = [col.get_text(strip=True) for col in row.find_all(["td", "th"])]
-                    rows.append("| " + " | ".join(cols) + " |")
+                    if cols:
+                        rows.append("| " + " | ".join(cols) + " |")
                 if rows:
                     lines.extend(rows)
-            elif el.name in ["blockquote", "div"] and "admonition" in el.get("class", []):
-                lines.append("> " + el.get_text(strip=True))
-        return "\n\n".join(lines)
+            elif el.name == "blockquote":
+                text = el.get_text(strip=True)
+                if text:
+                    lines.append("> " + text)
+
+        return "\n\n".join(filter(None, lines))
