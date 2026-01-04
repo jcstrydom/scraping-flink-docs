@@ -1,10 +1,15 @@
 from firecrawl import Firecrawl
+import dotenv
+import os
 
-firecrawl = Firecrawl(api_key='fc-24d13097a6024b0cae93ab6ff1b55b94')
+dotenv.load_dotenv()
+firecrawl = Firecrawl(api_key=os.getenv('FIRECRAWL_API_KEY'))
+
+print("\n Starting crawl...")
 
 # Crawl with scrape options
-response = firecrawl.crawl('https://example.com',
-    limit=100,
+response = firecrawl.crawl('https://nightlies.apache.org/flink/flink-docs-release-1.20/docs/concepts/overview/',
+    limit=10,
     scrape_options={
         'formats': [
             'markdown',
@@ -15,3 +20,13 @@ response = firecrawl.crawl('https://example.com',
         'onlyMainContent': True
     }
 )
+
+
+
+print("\n Crawl finished...\n Writing output to flink_firecrawl_output.json")
+
+with open("flink_firecrawl_output.json", "w", encoding="utf-8") as f:
+    f.write(response.text)
+
+print("\n DONE!")
+
