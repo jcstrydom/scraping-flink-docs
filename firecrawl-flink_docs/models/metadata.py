@@ -17,7 +17,7 @@ def _normalize_url(raw: Optional[str]) -> Optional[str]:
         netloc = netloc.rsplit(":", 1)[0]
     path = parts.path or "/"
     # remove fragment and trailing slash
-    normalized = urllib.parse.urlunsplit((scheme, netloc, path.rstrip("/"), parts.query, ""))
+    normalized = urllib.parse.urlunsplit((scheme, netloc, path.rstrip("/"), "", ""))
     return normalized
 
 
@@ -34,25 +34,30 @@ class PageMetadata(BaseModel):
       - scrape_timestamp: UTC timestamp of scrape
     """
 
+    
     page_id: Optional[str] = Field(None, description="sha256 hex of canonical url")
     title: Optional[str] = None
     url: HttpUrl
-    previous_url: Optional[HttpUrl] = None
+    parent_url: Optional[HttpUrl] = None
     is_root_url: bool = False
-    next_urls: List[Tuple[str, str]] = Field(default_factory=list)
-    scrape_timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    child_urls: List[Tuple[str, str]] = Field(default_factory=list)
+    scrape_timestamp: datetime = Field(default_factory=lambda: datetime.now().astimezone().replace(tzinfo=None))
 
     # normalize URL-like fields before validation/parsing
     @field_validator("url", mode="before")
     def _norm_url_field(cls, v):
         return _normalize_url(v)
 
-    @field_validator("previous_url", mode="before")
-    def _norm_previous_url_field(cls, v):
+    @field_validator("parent_url", mode="before")
+    def _norm_parent_url_field(cls, v):
         return _normalize_url(v)
+    
+    @field_validator('is_root_url', mode="before")
+    def _norm_is_root_url_field(cls, v):
+        return bool(v)
 
-    @field_validator("next_urls", mode="before")
-    def _norm_next_urls(cls, v):
+    @field_validator("child_urls", mode="before")
+    def _norm_child_urls(cls, v):
         # Expect a list of (text, url) pairs; normalize URLs and strip fragments
         if not v:
             return []
@@ -85,3 +90,12 @@ class PageMetadata(BaseModel):
     def to_dict(self, **kwargs):
         # thin wrapper for pydantic model_dump to control output if needed
         return self.model_dump(**kwargs)
+    
+    def __repr__(self):
+        return f"< PageMetadata page_id={self.page_id},\n  url={self.url}" + \
+                f"\n  title={self.title},\n  is_root_url={self.is_root_url}," + \
+                f"\n  parent_url={self.parent_url}," + \
+                f"\n  child_urls[{len(self.child_urls)}]=\n  --> " + \
+                    f"{'\n  --> '.join([f' {text} ({url})' for text, url in self.child_urls])}," + \
+                        f"\n  scrape_timestamp={self.scrape_timestamp} >"
+        
