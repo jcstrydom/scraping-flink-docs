@@ -95,9 +95,14 @@ class PageMetadata(BaseModel):
         return self.model_dump(**kwargs)
     
     def __repr__(self):
-        return f"< PageMetadata page_id={self.page_id},\n  url={self.url}" + \
-                f"\n  slug={self.slug},\n  summary={self.summary}," + \
-                f"\n  title={self.title},\n  headings=\n  --> " + \
+        if not self.headings:
+            self.headings = []
+        if not self.slug:
+            self.slug = ""
+        if not self.summary:
+            self.summary = ""
+        return  f"< PageMetadata page_id={self.page_id},\n  url={self.url},\n  title={self.title}," + \
+                f"\n  slug={self.slug},\n  summary={self.summary},\n  headings[{len(self.headings)}]=\n  --> " + \
                     f"{'\n  --> '.join([f' {d['level']}: {d['text']}' for d  in self.headings])}," + \
                 f"\n  is_root_url={self.is_root_url}," + \
                 f"\n  parent_url={self.parent_url}," + \

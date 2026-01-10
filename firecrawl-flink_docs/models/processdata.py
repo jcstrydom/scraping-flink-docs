@@ -134,6 +134,15 @@ class ResponseProcessor:
         """
         self.logger.info("extract_summaries_with_ollama called", extra={"model": model, "host": host, "markdown_len": len(markdown)})
 
+        # Check if host is reachable
+        try:
+            req = urllib.request.Request(host.rstrip('/'), method="HEAD")
+            urllib.request.urlopen(req, timeout=timeout)
+        except Exception:
+            self.logger.warning("Ollama host is not reachable", extra={"host": host})
+            return {"slug": "", "summary": "", "headings": []}
+
+
         slug_prompt = (
             "You are senior copy writer. Given the full markdown content, write a specific 'slug' from the page.\n"
             "A 'slug' is a single-word, lowercase identifier (no spaces) that will specifically summarize the page.\n"
@@ -172,8 +181,6 @@ class ResponseProcessor:
                         except json.JSONDecodeError:
                             self.logger.error("Failed parsing headings JSON from Ollama", extra={"response": resp})
                             respons_dict[n] = []
-                        # self.logger.error("Headings response missing 'headings' key", extra={"response": resp})
-                        # respons_dict[n] = []
                 except Exception:
                     self.logger.error("Failed to evaluate headings response", extra={"response": resp})
                     respons_dict[n] = []
@@ -191,8 +198,9 @@ class ResponseProcessor:
         except Exception:
             self.logger.exception("Failed saving markdown file", extra={"file": file_name})
 
-        
-    def parse_raw_response(self, raw_response: str,parent_url: str = None) -> dict:
+
+
+    def parse_raw_response(self, raw_response: str,parent_url: str = None, ask_ollama: bool = True) -> dict:
         data_dict = {}
 
         data_dict['title'] = raw_response['metadata']['title']
@@ -210,15 +218,16 @@ class ResponseProcessor:
         data_dict['prefix'] = self.extract_prefix(data_dict['url'])
         data_dict['page_id'] = self.prefix_to_hash(data_dict['prefix'])
         data_dict['child_urls'] = self.extract_markdown_links(raw_response['markdown'])
-        summaries = self.extract_summaries_with_ollama(raw_response['markdown'])
-        data_dict['slug'] = summaries.get('slug', '')
-        data_dict['summary'] = summaries.get('summary', '')
-        data_dict['headings'] = summaries.get('headings', [])
+        if ask_ollama:
+            summaries = self.extract_summaries_with_ollama(raw_response['markdown'])
+            data_dict['slug'] = summaries.get('slug', '')
+            data_dict['summary'] = summaries.get('summary', '')
+            data_dict['headings'] = summaries.get('headings', [])
 
         return data_dict
 
-    def process_response(self, raw_response: dict) -> dict:
-        data_dict = self.parse_raw_response(raw_response)
+    def process_response(self, raw_response: dict, ask_ollama: bool = True) -> dict:
+        data_dict = self.parse_raw_response(raw_response, ask_ollama=ask_ollama)
         metadata = PageMetadata.model_validate(data_dict)
         self.save_markdown_file(data_dict, raw_response['markdown'])
         self.logger.info("process_response completed", extra={"page_id": data_dict.get('page_id'), "url": data_dict.get('url')})
