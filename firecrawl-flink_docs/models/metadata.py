@@ -97,7 +97,7 @@ class PageMetadata(BaseModel):
     def __repr__(self):
         return f"< PageMetadata page_id={self.page_id},\n  url={self.url}" + \
                 f"\n  slug={self.slug},\n  summary={self.summary}," + \
-                f"\n  title={self.title},\n  headings=\n  --> ," + \
+                f"\n  title={self.title},\n  headings=\n  --> " + \
                     f"{'\n  --> '.join([f' {d['level']}: {d['text']}' for d  in self.headings])}," + \
                 f"\n  is_root_url={self.is_root_url}," + \
                 f"\n  parent_url={self.parent_url}," + \
