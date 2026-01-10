@@ -38,6 +38,9 @@ class PageMetadata(BaseModel):
     page_id: Optional[str] = Field(None, description="sha256 hex of canonical url")
     title: Optional[str] = None
     url: HttpUrl
+    slug: Optional[str] = None
+    summary: Optional[str] = None
+    headings: Optional[List[dict]] = None
     parent_url: Optional[HttpUrl] = None
     is_root_url: bool = False
     child_urls: List[Tuple[str, str]] = Field(default_factory=list)
@@ -93,9 +96,12 @@ class PageMetadata(BaseModel):
     
     def __repr__(self):
         return f"< PageMetadata page_id={self.page_id},\n  url={self.url}" + \
-                f"\n  title={self.title},\n  is_root_url={self.is_root_url}," + \
+                f"\n  slug={self.slug},\n  summary={self.summary}," + \
+                f"\n  title={self.title},\n  headings=\n  --> ," + \
+                    f"{'\n  --> '.join([f' {d['level']}: {d['text']}' for d  in self.headings])}," + \
+                f"\n  is_root_url={self.is_root_url}," + \
                 f"\n  parent_url={self.parent_url}," + \
                 f"\n  child_urls[{len(self.child_urls)}]=\n  --> " + \
                     f"{'\n  --> '.join([f' {text} ({url})' for text, url in self.child_urls])}," + \
-                        f"\n  scrape_timestamp={self.scrape_timestamp} >"
+                f"\n  scrape_timestamp={self.scrape_timestamp} >"
         
