@@ -158,11 +158,13 @@ class ResponseProcessor:
         )
 
         headings_prompt = (
-            "You are senior copy writer with who always responds in JSON to any query. Given the full markdown content, a specific 'headings' from the page.\n"
-            "In this case a 'headings' is a list of objects representing every heading in the page in document order.\n"
-            "Each object must have 'level' (integer) and 'text' (string).\n"
+            "You are senior copy writer. Given the full markdown content, extract all headings from the page.\n"
+            "Each heading must be described by a:\n"
+            " * 'level' - which is the index of the heading on the page (type=integer)\n"
+            " * 'text' - the text of the heading (type=string)\n"
             "Example: {\"headings\":[{\"level\":1,\"text\":\"Concepts\"},{\"level\":2,\"text\":\"Flink’s APIs\"}]}\n"
-            "Only respond with the JSON payload  'headings' list.\n\n"
+            "Respond with a valid JSON payload providing the top-level 'headings' key, with it's list.\n"
+            "ONLY provide JSON object, with no back-ticks and no further description.\n\n"
             "MARKDOWN:\n" + markdown
         )
 
@@ -170,20 +172,20 @@ class ResponseProcessor:
         for n,prompt in zip(['slug', 'summary', 'headings'], [slug_prompt, summary_prompt, headings_prompt]):
             resp = self._request_ollama(prompt, model, host, timeout)
             if n == 'headings':
+                self.logger.debug("Received headings response from Ollama", extra={"response": resp})
+                self.logger.debug(f"Response [lenght={len(resp)}]: \n '{resp}' \n...")
                 try:
-                    headings_resp = ast.literal_eval(resp)
+                    self.logger.debug("Parsing headings JSON from Ollama", extra={"response": resp})
+                    headings_json = json.loads(resp)
+                    respons_dict[n] = headings_json.get('headings', [])
+                except json.JSONDecodeError:
                     try:
+                        self.logger.error("Failed parsing headings JSON from Ollama, trying ast.literal_eval", extra={"response": resp})
+                        headings_resp = ast.literal_eval(resp)
                         respons_dict[n] = headings_resp['headings']
-                    except (KeyError, TypeError):
-                        try:
-                            headings_json = json.loads(resp)
-                            respons_dict[n] = headings_json.get('headings', [])
-                        except json.JSONDecodeError:
-                            self.logger.error("Failed parsing headings JSON from Ollama", extra={"response": resp})
-                            respons_dict[n] = []
-                except Exception:
-                    self.logger.error("Failed to evaluate headings response", extra={"response": resp})
-                    respons_dict[n] = []
+                    except Exception:
+                        self.logger.error("Failed to evaluate headings response", extra={"response": resp})
+                        respons_dict[n] = []
             else:
                 respons_dict[n] = resp.strip()
         
@@ -201,8 +203,8 @@ class ResponseProcessor:
 
 
     def parse_raw_response(self, raw_response: str,parent_url: str = None, ask_ollama: bool = True) -> dict:
+        self.logger.info("parse_raw_response called", extra={"raw_response_keys": list(raw_response.keys())})
         data_dict = {}
-
         data_dict['title'] = raw_response['metadata']['title']
         data_dict['url'] = raw_response['metadata']['url']
         self.logger.debug("parse_raw_response called", extra={"url": data_dict['url'], "parent_url": parent_url})
