@@ -6,6 +6,8 @@ import hashlib
 import logging
 
 from .metadata import PageMetadata
+import os
+from pathlib import Path
 
 
 class ResponseProcessor:
@@ -192,13 +194,19 @@ class ResponseProcessor:
         return respons_dict
     
     def save_markdown_file(self, data: dict, content: str, save_dir: str = './data/markdown_files/'):
-        file_name = f"{save_dir}{data.get('prefix')}_{data.get('page_id')}.md"
+        
+        # Get the directory of the current script and resolve relative paths from there
+        script_dir = Path(__file__).parent.parent
+        save_path = script_dir / save_dir
+        save_path.mkdir(parents=True, exist_ok=True)
+        
+        file_name = save_path / f"{data.get('prefix')}_{data.get('page_id')}.md"
         try:
             with open(file_name, "w", encoding="utf-8") as f:
                 f.write(content)
-            self.logger.info("Saved markdown file", extra={"file": file_name})
+            self.logger.info("Saved markdown file", extra={"file": str(file_name)})
         except Exception:
-            self.logger.exception("Failed saving markdown file", extra={"file": file_name})
+            self.logger.exception("Failed saving markdown file", extra={"file": str(file_name)})
 
 
 
