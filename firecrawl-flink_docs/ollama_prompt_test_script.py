@@ -4,6 +4,7 @@ import dotenv
 import logging
 
 from models.processdata import ResponseProcessor
+import os
 dotenv.load_dotenv(dotenv.find_dotenv("firecrawl-flink_docs/.env"))
 
 proc = ResponseProcessor(
@@ -19,12 +20,17 @@ def parse_arguments():
 
 def retrieve_persisted_response():
     # Simulate retrieval of persisted response
-    with open('./data/flink_firecrawl_markdown.md', 'r') as f:
+    base_path = os.path.dirname(os.path.abspath(__file__))
+    
+    md_file = os.path.join(base_path, 'data/flink_firecrawl_markdown.md')
+    response_file = os.path.join(base_path, 'data/flink_firecrawl_response_full.txt')
+    
+    with open(md_file, 'r') as f:
         lines = f.readlines()
 
     md_content = '\n'.join(lines)
 
-    with open('./data/flink_firecrawl_response_full.txt', 'r', encoding='utf-8') as f:
+    with open(response_file, 'r', encoding='utf-8') as f:
         full_content = f.read()
 
     file_response = ast.literal_eval(full_content)
@@ -53,4 +59,4 @@ def main(iterations=100, progress_interval=10):
 
 if __name__=="__main__":
     args = parse_arguments()
-    main(**args)
+    main(args)
