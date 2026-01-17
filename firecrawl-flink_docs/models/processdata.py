@@ -39,6 +39,17 @@ class ResponseProcessor:
         self.logger.debug("extract_prefix result", extra={"prefix": result})
         return result
     
+    def extract_version(self, url, version_prefix: str = 'https://nightlies.apache.org/flink/'):
+        self.logger.debug("extract_version called", extra={"url": url, "version_prefix": version_prefix})
+        pattern = re.compile(re.escape(version_prefix) + r'([^/]+)/docs/')
+        match = pattern.search(url)
+        if match:
+            version = match.group(1)
+            self.logger.debug("extract_version result", extra={"version": version})
+            return version
+        self.logger.debug("extract_version result", extra={"version": None})
+        return None
+    
     def prefix_to_hash(self, prefix: str, numeric: bool = False):
         self.logger.debug("prefix_to_hash called", extra={"prefix": prefix, "numeric": numeric})
         h = hashlib.sha256(prefix.encode('utf-8')).hexdigest()
@@ -210,6 +221,7 @@ class ResponseProcessor:
 
 
 
+
     def parse_raw_response(self, raw_response: str,parent_url: str = None, ask_ollama: bool = True) -> dict:
         self.logger.info("parse_raw_response called", extra={"raw_response_keys": list(raw_response.keys())})
         data_dict = {}
@@ -224,6 +236,7 @@ class ResponseProcessor:
         data_dict['parent_url'] = parent_url
 
         data_dict['content_hash'] = self.content_to_hash(raw_response['markdown'], numeric=False)
+        data_dict['version'] = self.extract_version(data_dict['url'])
         
         data_dict['prefix'] = self.extract_prefix(data_dict['url'])
         data_dict['page_id'] = self.prefix_to_hash(data_dict['prefix'])

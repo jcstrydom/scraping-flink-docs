@@ -39,6 +39,7 @@ class PageMetadata(BaseModel):
     prefix: str = Field("", description="prefix derived from url")
     title: Optional[str] = None
     url: HttpUrl
+    version: Optional[str] = None
     slug: Optional[str] = None
     summary: Optional[str] = None
     headings: Optional[List[dict]] = None
@@ -103,7 +104,7 @@ class PageMetadata(BaseModel):
         if not self.summary:
             self.summary = ""
         return  f"< PageMetadata\n    page_id={self.page_id},\n    prefix={self.prefix}," + \
-                f"\n    url={self.url},\n    title={self.title}," + \
+                f"\n    url={self.url},\n    title={self.title},\n    version={self.version}," + \
                 f"\n    slug={self.slug},\n    summary={self.summary},\n    headings[{len(self.headings)}]=\n      --> " + \
                     f"{'\n      --> '.join([f' {d['level']}: {d['text']}' for d  in self.headings])}," + \
                 f"\n    is_root_url={self.is_root_url}," + \
