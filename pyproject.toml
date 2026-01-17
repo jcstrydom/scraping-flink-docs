@@ -11,4 +11,5 @@ dependencies = [
     "pydantic>=2.12.5",
     "scrapy>=2.13.3",
     "typing>=3.10.0.0",
+    "sqlalchemy>=2.0.0",
 ]
