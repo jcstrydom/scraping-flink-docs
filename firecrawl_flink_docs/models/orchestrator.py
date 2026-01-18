@@ -138,7 +138,9 @@ class ScrapingOrchestrator:
             )
             
             # Process the response
+            self.logger.debug("Response received - getting parent URL", extra={"url": normalized_url})
             parent_url = self._get_parent_url_for_url(normalized_url)
+            self.logger.debug(f"Parent URL determined: {parent_url}", extra={"url": normalized_url})
             processed_data = self.processor.parse_raw_response(
                 response.model_dump(),
                 parent_url=parent_url,
@@ -146,18 +148,24 @@ class ScrapingOrchestrator:
             )
             
             # Save markdown file
+            self.logger.debug(f"Data processed: Title='{processed_data.get('title', '')}', is_root_url={processed_data.get('is_root_url', False)}   ", extra={"url": normalized_url})
             self.processor.save_markdown_file(
                 processed_data,
                 response.model_dump()['markdown']
             )
-            
+            self.logger.debug(f"Markdown file saved for URL: {normalized_url}", extra={"url": normalized_url})
+
             # Convert to PageMetadata and save to database
             metadata = PageMetadata.model_validate(processed_data)
+            self.logger.debug(f"Metadata created for URL: Version={metadata.version}", extra={"url": normalized_url})
             metadata_dict = metadata.to_dict()
             self.db_manager.save_page_metadata(metadata_dict)
+            self.logger.debug(f"Saved to DB @: '{self.db_manager.db_path}'", extra={"url": normalized_url})
             
             # Track this URL as scraped
+            self.logger.debug(f"Adding URLs to scraped URLs set. Set size={len(self.scraped_urls)}", extra={"url": normalized_url})
             self.scraped_urls.add(normalized_url)
+            self.logger.debug(f"URLs added to scraped URLs set. Set size={len(self.scraped_urls)}", extra={"url": normalized_url})
             
             self.logger.info(
                 "Successfully scraped and persisted URL",

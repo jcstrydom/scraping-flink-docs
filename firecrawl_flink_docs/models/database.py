@@ -6,6 +6,7 @@ from sqlalchemy import create_engine, Column, String, DateTime, Boolean, Text, I
 from sqlalchemy.orm import declarative_base, Session, relationship
 from datetime import datetime
 from pathlib import Path
+import logging
 
 Base = declarative_base()
 
@@ -35,7 +36,7 @@ class PageRecord(Base):
     content_hash = Column(String(64), nullable=True, index=True)
     
     # Relationship to children
-    children = relationship("PageRecord", foreign_keys=[parent_url], remote_side=[url])
+    children = relationship("PageRecord", remote_side=[url], foreign_keys=[parent_url], primaryjoin="PageRecord.parent_url == PageRecord.url", viewonly=True)
     
     def __repr__(self):
         return f"<PageRecord(page_id={self.page_id}, url={self.url}, title={self.title})>"
@@ -60,6 +61,7 @@ class DatabaseManager:
         
         self.db_path = Path(db_path)
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
+        self.logger = logging.getLogger(__name__)
         
         db_url = f"sqlite:///{self.db_path}"
         self.engine = create_engine(db_url, echo=False)
@@ -98,6 +100,25 @@ class DatabaseManager:
             if close_session:
                 session.close()
     
+    def _sanitize_metadata(self, metadata_dict: dict) -> dict:
+        """
+        Convert Pydantic types (like HttpUrl) to native Python types.
+        
+        Args:
+            metadata_dict: The metadata dictionary that may contain Pydantic types
+        
+        Returns:
+            Sanitized dictionary with native Python types
+        """
+        sanitized = {}
+        for key, value in metadata_dict.items():
+            # Convert Pydantic HttpUrl and other Pydantic types to strings
+            if hasattr(value, '__class__') and 'pydantic' in value.__class__.__module__:
+                sanitized[key] = str(value)
+            else:
+                sanitized[key] = value
+        return sanitized
+    
     def save_page_metadata(self, metadata_dict: dict, session: Session = None) -> PageRecord:
         """
         Save or update page metadata from a PageMetadata object dict.
@@ -109,31 +130,41 @@ class DatabaseManager:
         Returns:
             PageRecord instance
         """
+        
         close_session = False
         if session is None:
             session = self.get_session()
             close_session = True
         
         try:
+            # Sanitize metadata to convert Pydantic types to native Python types
+            metadata_dict = self._sanitize_metadata(metadata_dict)
+            
+            self.logger.debug(f"Saving metadata for page_id: {metadata_dict.get('page_id')}")
+            
             # Check if page already exists
             existing = session.query(PageRecord).filter(
-                PageRecord.page_id == metadata_dict['page_id']
+            PageRecord.page_id == metadata_dict['page_id']
             ).first()
             
             if existing:
+                self.logger.info(f"Updating existing page: {metadata_dict['page_id']}")
                 # Update existing record
                 for key, value in metadata_dict.items():
                     if hasattr(existing, key) and key != 'page_id':
                         setattr(existing, key, value)
                 page_record = existing
             else:
+                self.logger.info(f"Creating new page record: {metadata_dict['page_id']}")
                 # Create new record
                 page_record = PageRecord(**metadata_dict)
                 session.add(page_record)
-            
+
             session.commit()
+            self.logger.info(f"Successfully saved page_id: {metadata_dict['page_id']}")
             return page_record
         except Exception as e:
+            self.logger.error(f"Error saving metadata for page_id {metadata_dict.get('page_id')}: {str(e)}", exc_info=True)
             session.rollback()
             raise e
         finally:
