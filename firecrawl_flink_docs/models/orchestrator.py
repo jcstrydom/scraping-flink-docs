@@ -9,6 +9,7 @@ import logging
 from collections import deque
 from typing import Optional, Set, Tuple, List
 from datetime import datetime
+from urllib.parse import urlparse
 
 from firecrawl import Firecrawl
 
@@ -34,7 +35,9 @@ class ScrapingOrchestrator:
         db_path: Optional[str] = None,
         log_level: int = logging.INFO,
         ask_ollama: bool = True,
-        load_existing_urls: bool = True
+        load_existing_urls: bool = True,
+        allowed_domain: Optional[str] = None,
+        allow_outside_domain: bool = False,
     ):
         """
         Initialize the scraping orchestrator.
@@ -64,6 +67,28 @@ class ScrapingOrchestrator:
         self.db_manager = DatabaseManager(db_path=db_path)
         self.ask_ollama = ask_ollama
         self.load_existing_urls = load_existing_urls
+        # Allowed scope: stay within this netloc+path scope unless allow_outside_domain is True
+        # If not provided, infer from the `root_url` and default the path to the site's `/docs/` section.
+        if allowed_domain:
+            parsed = urlparse(allowed_domain if '://' in allowed_domain else f"http://{allowed_domain}")
+            self.allowed_netloc = parsed.netloc
+            # keep any provided path (empty -> '/').
+            self.allowed_path = parsed.path or "/"
+        else:
+            root_parsed = urlparse(root_url)
+            self.allowed_netloc = root_parsed.netloc
+            root_path = root_parsed.path or "/"
+            docs_idx = root_path.find("/docs/")
+            if docs_idx != -1:
+                # include up to and including '/docs/'
+                self.allowed_path = root_path[: docs_idx + len("/docs/")]
+            else:
+                # default to the top-level '/docs/' section on the same host
+                self.allowed_path = "/docs/"
+
+        # Backwards compatible string representation
+        self.allowed_domain = f"{self.allowed_netloc}{self.allowed_path}"
+        self.allow_outside_domain = allow_outside_domain
         
         self.root_url = root_url
         self.url_queue: deque = deque()
@@ -76,7 +101,11 @@ class ScrapingOrchestrator:
                 "root_url": root_url,
                 "db_path": self.db_manager.db_path,
                 "ask_ollama": ask_ollama,
-                "load_existing_urls": load_existing_urls
+                "load_existing_urls": load_existing_urls,
+                "allowed_domain": self.allowed_domain,
+                "allow_outside_domain": self.allow_outside_domain,
+                "allowed_netloc": self.allowed_netloc,
+                "allowed_path": self.allowed_path,
             }
         )
         
@@ -120,7 +149,12 @@ class ScrapingOrchestrator:
             PageMetadata if successful, None if failed or already scraped
         """
         normalized_url = self.processor._normalize_url(url)
-        
+
+        # Enforce allowed scope for direct scrape calls
+        if not self._is_within_allowed_domain(normalized_url):
+            self.logger.info("URL outside allowed scope, skipping scrape", extra={"url": normalized_url, "allowed": self.allowed_domain})
+            return None
+
         # Check if already scraped
         if self.has_been_scraped(normalized_url):
             self.logger.info("URL already scraped, skipping", extra={"url": normalized_url})
@@ -198,7 +232,12 @@ class ScrapingOrchestrator:
         
         for text, url in urls:
             normalized = self.processor._normalize_url(url)
-            
+            # Enforce domain restriction unless explicitly allowed
+            if not self._is_within_allowed_domain(normalized):
+                skipped += 1
+                self.logger.debug("URL outside allowed domain, skipping queue add", extra={"url": normalized, "allowed_domain": self.allowed_domain})
+                continue
+
             if self.has_been_scraped(normalized):
                 skipped += 1
                 self.logger.debug("URL already scraped, skipping queue add", extra={"url": normalized})
@@ -212,6 +251,37 @@ class ScrapingOrchestrator:
             "Added URLs to queue",
             extra={"added": added, "skipped": skipped, "queue_size": len(self.url_queue)}
         )
+
+    def _is_within_allowed_domain(self, url: str) -> bool:
+        """
+        Check whether a given URL falls within the allowed domain.
+        - If `allow_outside_domain` is True, always returns True.
+        - Otherwise compares the URL's netloc to `self.allowed_domain` and allows
+          subdomains of the allowed domain as well (e.g. `sub.example.com` when
+          allowed_domain is `example.com`).
+        """
+        if self.allow_outside_domain:
+            return True
+
+        try:
+            parsed = urlparse(url)
+            netloc = parsed.netloc
+            path = parsed.path or "/"
+            if not netloc:
+                return False
+
+            # allow exact match or subdomains
+            netloc_ok = netloc == self.allowed_netloc or netloc.endswith(f".{self.allowed_netloc}")
+
+            # path check: if allowed_path is '/', allow all paths on the host; otherwise require prefix
+            if self.allowed_path == "/":
+                path_ok = True
+            else:
+                path_ok = path.startswith(self.allowed_path)
+
+            return netloc_ok and path_ok
+        except Exception:
+            return False
     
     def get_next_url(self) -> Optional[Tuple[str, str]]:
         """
@@ -269,7 +339,12 @@ class ScrapingOrchestrator:
                 break
             
             link_text, url = url_entry
-            
+            # If URL is outside allowed scope, skip and count as skipped
+            if not self._is_within_allowed_domain(url):
+                skipped_count += 1
+                self.logger.debug("Skipping URL outside allowed scope", extra={"url": url, "allowed": self.allowed_domain})
+                continue
+
             result = self.scrape_and_persist(url)
             
             if result:
@@ -310,9 +385,13 @@ class ScrapingOrchestrator:
         
         # Start with root URL
         if not self.has_been_scraped(self.root_url):
-            root_metadata = self.scrape_and_persist(self.root_url)
-            if root_metadata and root_metadata.child_urls:
-                self.add_urls_to_queue(root_metadata.child_urls)
+            # enforce scope for the initial root scrape as well
+            if not self._is_within_allowed_domain(self.root_url):
+                self.logger.warning("Root URL is outside allowed scope, skipping initial scrape", extra={"root_url": self.root_url, "allowed": self.allowed_domain})
+            else:
+                root_metadata = self.scrape_and_persist(self.root_url)
+                if root_metadata and root_metadata.child_urls:
+                    self.add_urls_to_queue(root_metadata.child_urls)
         
         total_stats = {
             "total_scraped": 0,
@@ -337,6 +416,37 @@ class ScrapingOrchestrator:
         
         self.logger.info("Root scraping completed", extra=total_stats)
         return total_stats
+
+    def to_dict(self, include_queue: bool = False, queue_preview: int = 20) -> dict:
+        """
+        Return a serializable snapshot of the orchestrator's key runtime state.
+
+        Args:
+            include_queue: If True, include a preview of items in the queue.
+            queue_preview: Number of queue items to include when `include_queue` is True.
+
+        Returns:
+            A dict with configuration and runtime counters.
+        """
+        stats = self.get_scraping_stats()
+        stats.update({
+            "allowed_domain": self.allowed_domain,
+            "allow_outside_domain": self.allow_outside_domain,
+            "allowed_netloc": self.allowed_netloc,
+            "allowed_path": self.allowed_path,
+            "ask_ollama": self.ask_ollama,
+            "load_existing_urls": self.load_existing_urls,
+        })
+
+        if include_queue:
+            stats["queue_preview"] = list(self.url_queue)[:queue_preview]
+
+        # Avoid returning large sets directly; provide counts and a small sample
+        stats["scraped_urls_count"] = len(self.scraped_urls)
+        stats["failed_urls_count"] = len(self.failed_urls)
+        stats["scraped_urls_sample"] = list(self.scraped_urls)[:20]
+
+        return stats
     
     def get_scraping_stats(self) -> dict:
         """Get overall scraping statistics."""
