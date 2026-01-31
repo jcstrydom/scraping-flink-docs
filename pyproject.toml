@@ -12,4 +12,5 @@ dependencies = [
     "scrapy>=2.13.3",
     "typing>=3.10.0.0",
     "sqlalchemy>=2.0.0",
+    "polars>=1.37.1",
 ]
