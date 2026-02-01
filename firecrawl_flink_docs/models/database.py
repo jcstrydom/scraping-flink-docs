@@ -43,6 +43,31 @@ class PageRecord(Base):
 
 
 class DatabaseManager:
+        def update_page_fields_by_page_id(self, page_id: str, update_fields: dict):
+            """
+            Update only specified fields for a page by page_id.
+            Args:
+                page_id: The page_id to update
+                update_fields: Dict of fields to update (e.g. {"summary": ..., "slug": ..., "headings": ...})
+            """
+            session = self.get_session()
+            try:
+                page = session.query(PageRecord).filter(PageRecord.page_id == page_id).first()
+                if not page:
+                    self.logger.warning(f"No page found for page_id {page_id}, skipping update.")
+                    return False
+                for key, value in update_fields.items():
+                    if hasattr(page, key):
+                        setattr(page, key, value)
+                session.commit()
+                self.logger.info(f"Updated page_id {page_id} with fields: {list(update_fields.keys())}")
+                return True
+            except Exception as e:
+                self.logger.error(f"Error updating page_id {page_id}: {e}", exc_info=True)
+                session.rollback()
+                return False
+            finally:
+                session.close()
     """
     Manages SQLite database for scraping persistence.
     Handles initialization, session management, and common queries.
