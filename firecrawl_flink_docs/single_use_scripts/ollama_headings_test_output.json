@@ -1,0 +1,125 @@
+[
+  {
+    "file": "concepts_flink_architecture_5ab3a709ee362ae9e1656235c806d29449f53047ba9b6940f3ecbaba50b322e0.md",
+    "ollama_response": {
+      "slug": "cluster",
+      "summary": "\"Overview of Flink's Distributed Architecture\"",
+      "headings": [
+        {
+          "level": 1,
+          "text": "Flink Architecture"
+        },
+        {
+          "level": 2,
+          "text": "Anatomy of a Flink Cluster"
+        },
+        {
+          "level": 3,
+          "text": "JobManager"
+        },
+        {
+          "level": 4,
+          "text": "Dispatcher"
+        },
+        {
+          "level": 5,
+          "text": "JobMaster"
+        },
+        {
+          "level": 6,
+          "text": "TaskManagers"
+        },
+        {
+          "level": 7,
+          "text": "Tasks and Operator Chains"
+        },
+        {
+          "level": 8,
+          "text": "Task Slots and Resources"
+        },
+        {
+          "level": 9,
+          "text": "Flink Application Execution"
+        },
+        {
+          "level": 10,
+          "text": "Flink Application Cluster"
+        },
+        {
+          "level": 11,
+          "text": "Flink Session Cluster"
+        }
+      ]
+    }
+  },
+  {
+    "file": "concepts_overview_d699b5373c84d3776703d9c89d472a1ecee196e604219eb74f8e5647e6a4513c.md",
+    "ollama_response": {
+      "slug": "concepts",
+      "summary": "\"Understanding Flink's Programming Abstractions\"",
+      "headings": [
+        {
+          "level": 1,
+          "text": "Concepts"
+        },
+        {
+          "level": 2,
+          "text": "Flink’s APIs"
+        }
+      ]
+    }
+  },
+  {
+    "file": "concepts_stateful_stream_processing_2242824968fe3664ac00b3506911daf8e28b527e9f76a7f85c2c04e20e9ff783.md",
+    "ollama_response": {
+      "slug": "The documentation provides an in-depth explanation of state and fault tolerance mechanisms in Flink, including streaming and batch programs.\n\n**State Overview**\n\nFlink uses a concept called \"state\" to store information that is required for the processing of data streams or batches. State can be divided into two categories:\n\n1. **Operator State**: This refers to the state stored within an operator (e.g., `map`, `filter`) itself.\n2. **Job State**: This refers to the state stored globally across all operators in a job.\n\n**Checkpointing**\n\nFlink uses checkpointing to periodically save the current state of an application, ensuring that it can be restored in case of failures. There are two types of checkpoints:\n\n1. **Manual Checkpoints**: These are triggered by the user and are used to save a specific point in time.\n2. **Automatic Checkpoints**: These are triggered by Flink's internal scheduling mechanism and occur at regular intervals.\n\n**Savepoints**\n\nFlink provides an additional concept called \"savepoints\" which allows users to manually trigger checkpoints at any point in time, ensuring that state is preserved without the need for automatic checkpointing.\n\n**Fault Tolerance**\n\nFlink provides fault tolerance mechanisms for both streaming and batch programs:\n\n1. **Streaming Fault Tolerance**: This ensures that data streams can be replayed in case of failures.\n2. **Batch Fault Tolerance**: This ensures that batches can be fully recovered from failures.\n\n**Recovery Mechanism**\n\nWhen a failure occurs, Flink's recovery mechanism is triggered. The recovery process involves:\n\n1. **Restoring State**: The state stored during the last checkpoint is restored.\n2. **Replaying Streams**: The data streams are replayed to their original input positions.\n3. **Executing Operators**: The operators are executed again from the restored state.\n\n**State Backends**\n\nFlink provides a variety of state backends, including:\n\n1. **In-Memory Data Structures**: Simple in-memory data structures for small applications.\n2. **Out-of-Core Data Structures**: Larger data structures that store data on disk for larger applications.\n3. **Key-Value Indexes**: More complex data structures used for large-scale applications.\n\n**Exactly Once vs. At Least Once**\n\nFlink provides two fault tolerance modes:\n\n1. **Exactly Once**: Ensures that each record is processed exactly once, even in the presence of failures.\n2. **At Least Once**: Ensures that each record is either processed or failed, but may not be processed exactly once.\n\n**Batch Programs**\n\nFlink executes batch programs as a special case of streaming programs, using BATCH Execution Mode. Batch programs have bounded input data (finite number of elements), allowing for efficient recovery mechanisms.\n\nIn summary, Flink provides a robust state and fault tolerance mechanism for both streaming and batch programs, ensuring that data is properly stored and can be recovered in case of failures.",
+      "summary": "This document provides an overview of state management and fault tolerance in Apache Flink, a popular open-source platform for distributed streaming and batch processing.\n\n**State Management**\n\nIn Flink, state is managed using a state backend, which stores the data in a key-value store such as a hash map or RocksDB. The state backend is responsible for taking snapshots of the state at regular intervals (checkpoints) to ensure that the state can be recovered in case of failures.\n\n**Checkpointing**\n\nFlink uses checkpointing to manage state and recover from failures. Checkpointing involves:\n\n1. Taking a snapshot of the current state\n2. Writing the snapshot to the state backend\n3. Forwarding the checkpoint barrier to downstream operators\n\nCheckpoints are used to ensure that the state can be recovered in case of failures.\n\n**Unaligned Checkpointing**\n\nFlink also supports unaligned checkpointing, which skips the alignment step during a checkpoint. This can improve performance by reducing latency, but it requires careful handling of duplicate records during recovery.\n\n**Exactly Once vs. At Least Once**\n\nFlink provides two modes for state management: exactly once and at least once. Exactly once ensures that each record is processed once, while at least once ensures that all records are processed, even if some may be lost in case of failures.\n\n**Fault Tolerance in Batch Programs**\n\nIn batch programs, Flink uses a different approach to fault tolerance than in streaming programs. Instead of using checkpointing, Flink relies on replaying the entire stream to recover from failures.\n\n**State and Fault Tolerance in Streaming Programs**\n\nIn streaming programs, Flink uses a combination of state management and checkpointing to ensure fault tolerance. The alignment step during a checkpoint ensures that all records are processed correctly, while the use of checkpoints ensures that the state can be recovered in case of failures.\n\n**State Backends**\n\nFlink provides several state backend options, including:\n\n1. In-memory hash maps\n2. RocksDB\n\nEach state backend has its own advantages and disadvantages, and the choice of which one to use depends on the specific requirements of the application.\n\nOverall, Flink's state management and fault tolerance features provide a robust and reliable platform for distributed streaming and batch processing applications.",
+      "headings": []
+    }
+  },
+  {
+    "file": "concepts_time_6f68a1bd3be0e82ef39934656ae8c64cebfcdece231b3e4279f92c486b30e7fd.md",
+    "ollama_response": {
+      "slug": "timely",
+      "summary": "\"Timely stream processing explained in Flink\".",
+      "headings": [
+        {
+          "level": 1,
+          "text": "Timely Stream Processing"
+        },
+        {
+          "level": 2,
+          "text": "Introduction"
+        },
+        {
+          "level": 3,
+          "text": "Notions of Time: Event Time and Processing Time"
+        },
+        {
+          "level": 4,
+          "text": "Event Time and Watermarks"
+        },
+        {
+          "level": 5,
+          "text": "Watermarks in Parallel Streams"
+        },
+        {
+          "level": 6,
+          "text": "Lateness"
+        },
+        {
+          "level": 7,
+          "text": "Windowing"
+        }
+      ]
+    }
+  },
+  {
+    "file": "connectors_datastream_filesystem_d42a17bf4e10a68ef618eae3b1e3adb42162ef3f62db1abf80d2db8d6b932158.md",
+    "ollama_response": {
+      "slug": "This document provides an overview and detailed information about the File Sink in Apache Flink. The File Sink is a sink that writes data to files, allowing users to persist data even after a job has completed.\n\n**Key Features**\n\n*   **Parallelism**: The Writer is executed with the user-specified parallelism, but the Committer is executed with parallelism equal to 1.\n*   **High-Availability**: If a JobManager failure happens while the Committers are committing, duplicates may occur. This will be fixed in future Flink versions.\n*   **Multi-part Upload**: The File Sink uses the Multi-part Upload feature of S3 and OSS to upload files in independent chunks (thus the \"multi-part\") which can be combined into the original file when all the parts of the MPU are successfully uploaded.\n\n**Common Issues**\n\n*   **Error Handling**: Flink does not differentiate between normal job termination and termination due to failure, so the last in-progress files will not be transitioned to the \"finished\" state.\n*   **Overwriting Committed Data**: The File Sink never overwrites committed data. If an old checkpoint or savepoint is restored with some part-files being not fully uploaded, their associated MPUs may time-out before the job is restarted.\n\n**Best Practices**\n\n*   **Use S3 or OSS for Multi-part Upload**: To guarantee exactly-once semantics while being efficient, use the Multi-part Upload feature of S3 and OSS to upload files in independent chunks.\n*   **Set Bucket Lifecycle Rules Aggressively**: Set bucket lifecycle rules aggressively to abort multipart uploads that don't complete within a specified number of days after being initiated.\n\n**Important Considerations**\n\n*   **Hadoop-based FileSystem vs. Presto-based FileSystem**: For S3, use the Hadoop-based FileSystem implementation (\"s3a://\") for the sink and \"s3p://\" for checkpointing to avoid unpredictable behavior.\n*   **Savepoint Recovery**: When restoring from an old checkpoint or savepoint, ensure that all part-files are fully uploaded before attempting recovery.\n\n**PyFlink Specific Considerations**\n\n*   **FileSink and FileCompactor**: PyFlink only supports \"ConcatFileCompactor\" and \"IdenticalFileCompactor\".\n\nBy following these best practices and considerations, you can use the File Sink in Apache Flink to persist data efficiently while avoiding common issues.",
+      "summary": "This is a comprehensive guide to using the `FileSink` in Apache Flink for storing data in various file systems. Here's a summary of the key points:\n\n**General Considerations**\n\n1. **Important Notes**: When using Hadoop < 2.7, use `OnCheckpointRollingPolicy` which rolls part files on every checkpoint.\n2. **Job Termination**: The last in-progress files will not be transitioned to the \"finished\" state after normal job termination.\n3. **FileSystem Support**: Flink currently supports five filesystems: HDFS, S3, OSS, ABFS, and Local.\n\n**BATCH-specific Considerations**\n\n1. **Writer Parallelism**: The `Writer` is executed with the user-specified parallelism.\n2. **Committer Parallelism**: The `Committer` is executed with parallelism equal to 1.\n3. **High-Availability**: If a `JobManager` failure happens while the `Committers` are committing, duplicates may occur.\n\n**S3-specific Considerations**\n\n1. **Presto-based Implementation**: Use explicitly \"s3a://\" for Hadoop-based implementation and \"s3p://\" for Presto-based implementation.\n2. **Multi-part Upload**: Flink uses the Multi-part Upload feature of S3 to upload files in independent chunks.\n\n**OSS-specific Considerations**\n\n1. **Multi-part Upload**: Flink also uses the Multi-part Upload feature of OSS to upload files in independent chunks.\n\n**Compaction**\n\n1. **FileCompactStrategy**: Specifies when and which files get compacted.\n2. **FileCompactor**: Specifies how to compact the given list of `Path` and write the result file.\n3. **OutputStreamBasedFileCompactor**: Writes the compacted results into an output stream.\n4. **RecordWiseFileCompactor**: Reads records one-by-one from the input files and writes into the result file.\n\n**Disabling Compaction**\n\n1. **Important Note 1**: Once compaction is enabled, you must explicitly call `disableCompact` when building the `FileSink`.\n2. **Important Note 2**: The written files need to wait for longer time before they get visible.\n\n**PyFlink-specific Considerations**\n\n1. **ConcatFileCompactor**: Supports concatenating the list of files directly.\n2. **IdenticalFileCompactor**: Writes the compacted results into an identical file.",
+      "headings": []
+    }
+  }
+]

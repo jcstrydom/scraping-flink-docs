@@ -43,36 +43,27 @@ class PageRecord(Base):
 
 
 class DatabaseManager:
-        def update_page_fields_by_page_id(self, page_id: str, update_fields: dict):
-            """
-            Update only specified fields for a page by page_id.
-            Args:
-                page_id: The page_id to update
-                update_fields: Dict of fields to update (e.g. {"summary": ..., "slug": ..., "headings": ...})
-            """
+    def get_unprocessed_pages(self, session: Session = None) -> list:
+        """
+        Get all pages missing summary, slug, headings, or content_hash.
+        Returns list of PageRecord objects.
+        """
+        close_session = False
+        if session is None:
             session = self.get_session()
-            try:
-                page = session.query(PageRecord).filter(PageRecord.page_id == page_id).first()
-                if not page:
-                    self.logger.warning(f"No page found for page_id {page_id}, skipping update.")
-                    return False
-                for key, value in update_fields.items():
-                    if hasattr(page, key):
-                        setattr(page, key, value)
-                session.commit()
-                self.logger.info(f"Updated page_id {page_id} with fields: {list(update_fields.keys())}")
-                return True
-            except Exception as e:
-                self.logger.error(f"Error updating page_id {page_id}: {e}", exc_info=True)
-                session.rollback()
-                return False
-            finally:
+            close_session = True
+        try:
+            # Check for any of the fields being empty or None
+            return session.query(PageRecord).filter(
+                (PageRecord.summary == None) | (PageRecord.summary == '') |
+                (PageRecord.slug == None) | (PageRecord.slug == '') |
+                (PageRecord.headings == None) | (PageRecord.headings == []) |
+                (PageRecord.content_hash == None) | (PageRecord.content_hash == '')
+            ).all()
+        finally:
+            if close_session:
                 session.close()
-    """
-    Manages SQLite database for scraping persistence.
-    Handles initialization, session management, and common queries.
-    """
-    
+
     def __init__(self, db_path: str = None):
         """
         Initialize database manager.
@@ -91,6 +82,36 @@ class DatabaseManager:
         db_url = f"sqlite:///{self.db_path}"
         self.engine = create_engine(db_url, echo=False)
         Base.metadata.create_all(self.engine)
+
+
+        
+    def update_page_fields_by_page_id(self, page_id: str, update_fields: dict):
+        """
+        Update only specified fields for a page by page_id.
+        Args:
+            page_id: The page_id to update
+            update_fields: Dict of fields to update (e.g. {"summary": ..., "slug": ..., "headings": ...})
+        """
+        session = self.get_session()
+        try:
+            page = session.query(PageRecord).filter(PageRecord.page_id == page_id).first()
+            if not page:
+                self.logger.warning(f"No page found for page_id {page_id}, skipping update.")
+                return False
+            for key, value in update_fields.items():
+                if hasattr(page, key):
+                    setattr(page, key, value)
+            session.commit()
+            self.logger.info(f"Updated page_id {page_id} with fields: {list(update_fields.keys())}")
+            return True
+        except Exception as e:
+            self.logger.error(f"Error updating page_id {page_id}: {e}", exc_info=True)
+            session.rollback()
+            return False
+        finally:
+            session.close()
+
+    
     
     def get_session(self) -> Session:
         """Get a new database session."""
