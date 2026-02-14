@@ -1,4 +1,4 @@
-import dotenv, os, re, ast, json
+import dotenv, os, re, ast, json, time
 import urllib.parse
 import urllib.request
 import urllib.error
@@ -11,6 +11,7 @@ from pathlib import Path
 
 
 class ResponseProcessor:
+
 
     def __init__(self, root_url: str = None, log_level: int = logging.INFO):
         # Configure console logger
@@ -113,15 +114,16 @@ class ResponseProcessor:
         self.logger.debug("extract_markdown_links result", extra={"unique_count": len(ret)})
         return ret
     
-    def _request_ollama(self, prompt: str, model: str, host: str, timeout: int) -> str:
+    def _request_ollama(self, prompt: str, model: str, host: str, timeout: int=180) -> str:
         payload = json.dumps({
             "model": model,
             "prompt": prompt,
-            "stream": False
+            "stream": False,
+            
         }).encode('utf-8')
 
         url = host.rstrip('/') + "/api/generate"
-        req = urllib.request.Request(url, data=payload, headers={"Content-Type": "application/json"}, method="POST")
+        req = urllib.request.Request(url, data=payload, headers={"Content-Type": "application/json","timeout": timeout}, method="POST")
         try:
             with urllib.request.urlopen(req, timeout=timeout) as resp:
                 resp_text = resp.read().decode('utf-8', errors='replace')
@@ -136,7 +138,95 @@ class ResponseProcessor:
             self.logger.exception("Failed contacting Ollama server")
             raise
 
-    def extract_summaries_with_ollama(self, markdown: str, model: str = "llama3.2:3b", host: str = "http://localhost:11434", timeout: int = 30) -> dict:
+    def _request_gemini(self, prompt: str, model: str, api_key: str, timeout: int = 180) -> str:
+        """
+        Call Google's Generative Language API (Gemini) using a REST call.
+        Returns model text content (string) or raises on failure.
+        """
+        # Normalize model path: ensure it starts with 'models/'
+        model_path = model
+        if not model_path.startswith('models/'):
+            model_path = f"models/{model_path}"
+
+        payload = json.dumps({
+            "prompt": {"text": prompt},
+            "temperature": 0.2,
+            "maxOutputTokens": 512
+        }).encode("utf-8")
+
+        # Try common endpoint versions in order - v1 first, then v1beta2.
+        endpoints = [
+            f"https://generativelanguage.googleapis.com/v1/{model_path}:generate?key={api_key}",
+            f"https://generativelanguage.googleapis.com/v1beta2/{model_path}:generate?key={api_key}",
+        ]
+
+        last_exc = None
+        for url in endpoints:
+            req = urllib.request.Request(url, data=payload, headers={"Content-Type": "application/json"}, method="POST")
+            try:
+                self.logger.debug("Attempting Gemini endpoint", extra={"url": url})
+                with urllib.request.urlopen(req, timeout=timeout) as resp:
+                    resp_text = resp.read().decode("utf-8", errors="replace")
+
+                resp_json = json.loads(resp_text)
+                # Response shape: {"candidates": [{"content": "..."}], ...}
+                if isinstance(resp_json, dict):
+                    candidates = resp_json.get("candidates") or resp_json.get("outputs") or []
+                    if candidates and isinstance(candidates, list):
+                        first = candidates[0]
+                        # candidate could be string or dict with 'content'
+                        if isinstance(first, dict):
+                            return first.get("content", "")
+                        elif isinstance(first, str):
+                            return first
+                return ""
+            except urllib.error.HTTPError as e:
+                body = ''
+                try:
+                    body = e.read().decode('utf-8', errors='ignore') if hasattr(e, 'read') else ''
+                except Exception:
+                    body = ''
+                self.logger.warning("Gemini HTTP error on endpoint", extra={"url": url, "status": getattr(e, 'code', None), "body_snippet": body[:1000]})
+                last_exc = e
+                # If 404, try next endpoint; otherwise re-raise so retries at higher level behave normally
+                if getattr(e, 'code', None) == 404:
+                    continue
+                raise
+            except Exception as e:
+                self.logger.exception("Failed contacting Gemini API for endpoint", extra={"url": url})
+                last_exc = e
+                # try next endpoint
+                continue
+
+        # If we reach here all endpoints failed
+        if last_exc:
+            raise last_exc
+        return ""
+
+    def _fallback_extract_headings(self, markdown: str):
+        """
+        Fallback: extract headings from markdown using regex if Ollama fails.
+        Returns a list of dicts: [{"level": int, "text": str}]
+        """
+        import re
+        headings = []
+        for line in markdown.splitlines():
+            m = re.match(r'^(#+)\\s+(.*)', line)
+            if m:
+                level = len(m.group(1))
+                text = m.group(2).strip()
+                headings.append({"level": level, "text": text})
+        return headings
+
+    def extract_summaries_with_ollama(
+            self,
+            markdown: str,
+            model: str = "llama3.2:3b",
+            host: str = "http://localhost:11434",
+            timeout: int = 180,
+            retries: int = 3,
+            retry_delay: float = 5.0,
+            provider: str = "auto") -> dict:
         """
         Send `markdown` to an Ollama instance and ask for JSON containing:
           - slug: one-word lowercase summary
@@ -146,14 +236,49 @@ class ResponseProcessor:
         Returns a dict with keys: `slug`, `summary`, `headings` (or raises on hard failure).
         """
         self.logger.info("extract_summaries_with_ollama called", extra={"model": model, "host": host, "markdown_len": len(markdown)})
+        # Determine provider behavior: 'auto' (try Ollama, fallback to Gemini),
+        # 'ollama' (force Ollama only), 'gemini' (force Gemini only).
+        provider = provider.lower() if provider else 'auto'
+        use_ollama = False
+        gemini_key = None
 
-        # Check if host is reachable
-        try:
-            req = urllib.request.Request(host.rstrip('/'), method="HEAD")
-            urllib.request.urlopen(req, timeout=timeout)
-        except Exception:
-            self.logger.warning("Ollama host is not reachable", extra={"host": host})
-            return {"slug": "", "summary": "", "headings": []}
+        if provider == 'gemini':
+            # forced Gemini: load key from .env
+            try:
+                dotenv_path = Path(__file__).parent.parent / '.env'
+                dotenv.load_dotenv(dotenv_path.as_posix())
+                gemini_key = os.environ.get('GOOGLE_GEMINI_API_KEY')
+                if not gemini_key:
+                    self.logger.warning("Provider=gemini but no GOOGLE_GEMINI_API_KEY found in .env; falling back to regex headings")
+                    return {"slug": None, "summary": None, "headings": self._fallback_extract_headings(markdown)}
+            except Exception:
+                self.logger.exception("Failed loading .env for Gemini key; falling back")
+                return {"slug": None, "summary": None, "headings": self._fallback_extract_headings(markdown)}
+        elif provider == 'ollama':
+            try:
+                req = urllib.request.Request(host.rstrip('/'), method="HEAD")
+                urllib.request.urlopen(req, timeout=timeout)
+                use_ollama = True
+            except Exception:
+                self.logger.warning("Provider=ollama but host not reachable; falling back to regex headings", extra={"host": host})
+                return {"slug": None, "summary": None, "headings": self._fallback_extract_headings(markdown)}
+        else:  # auto
+            try:
+                req = urllib.request.Request(host.rstrip('/'), method="HEAD")
+                urllib.request.urlopen(req, timeout=timeout)
+                use_ollama = True
+            except Exception:
+                self.logger.warning("Ollama host is not reachable, will try Gemini if API key present", extra={"host": host})
+                try:
+                    dotenv_path = Path(__file__).parent.parent / '.env'
+                    dotenv.load_dotenv(dotenv_path.as_posix())
+                    gemini_key = os.environ.get('GOOGLE_GEMINI_API_KEY')
+                    if not gemini_key:
+                        self.logger.warning("No GOOGLE_GEMINI_API_KEY found in .env; falling back to local regex headings")
+                        return {"slug": None, "summary": None, "headings": self._fallback_extract_headings(markdown)}
+                except Exception:
+                    self.logger.exception("Failed loading .env for Gemini key; falling back")
+                    return {"slug": None, "summary": None, "headings": self._fallback_extract_headings(markdown)}
 
 
         slug_prompt = (
@@ -182,26 +307,85 @@ class ResponseProcessor:
         )
 
         respons_dict = {}
-        for n,prompt in zip(['slug', 'summary', 'headings'], [slug_prompt, summary_prompt, headings_prompt]):
-            resp = self._request_ollama(prompt, model, host, timeout)
-            if n == 'headings':
-                self.logger.debug("Received headings response from Ollama", extra={"response": resp})
-                self.logger.debug(f"Response [lenght={len(resp)}]: \n '{resp}' \n...")
+        for n, prompt in zip(['slug', 'summary', 'headings'], [slug_prompt, summary_prompt, headings_prompt]):
+            src = 'Ollama' if use_ollama else 'Gemini'
+            self.logger.debug(f"Requesting {n} from {src}")
+            self.logger.debug(f"Requesting {n} prompt: \n '{prompt[:500]}' \n...")
+            last_exception = None
+            for attempt in range(retries):
                 try:
-                    self.logger.debug("Parsing headings JSON from Ollama", extra={"response": resp})
-                    headings_json = json.loads(resp)
-                    respons_dict[n] = headings_json.get('headings', [])
-                except json.JSONDecodeError:
-                    try:
-                        self.logger.error("Failed parsing headings JSON from Ollama, trying ast.literal_eval", extra={"response": resp})
-                        headings_resp = ast.literal_eval(resp)
-                        respons_dict[n] = headings_resp['headings']
-                    except Exception:
-                        self.logger.error("Failed to evaluate headings response", extra={"response": resp})
-                        respons_dict[n] = []
+                    self.logger.debug(f"{src} API call for {n}, attempt {attempt+1}/{retries}")
+                    if use_ollama:
+                        resp = self._request_ollama(prompt, model, host, timeout)
+                    else:
+                        # Use Gemini via REST API. If provided `model` doesn't look like a Gemini name,
+                        # fall back to a sensible default.
+                        if model and model.startswith('models/'):
+                            gemini_model = model
+                        else:
+                            gemini_model = 'models/text-bison-001'
+                        api_key = gemini_key or os.environ.get('GOOGLE_GEMINI_API_KEY')
+                        resp = self._request_gemini(prompt, gemini_model, api_key, timeout)
+                    self.logger.debug(f"{src} API call for {n} succeeded", extra={"response": resp})
+                    self.logger.debug(f"Response [length={len(resp)}]: \n '{resp}' \n...")
+                    if n == 'headings':
+                        self.logger.debug(f"Received headings response from {src}", extra={"response": resp})
+                        self.logger.debug(f"Response [length={len(resp)}]: \n '{resp}' \n...")
+                        # Try to extract JSON object from response
+                        import re
+                        json_str = resp
+                        # Remove code block markers if present
+                        json_str = re.sub(r'^```json|^```|```$', '', json_str.strip(), flags=re.MULTILINE).strip()
+                        # Try to extract JSON object from within extra text
+                        match = re.search(r'\{.*\}', json_str, re.DOTALL)
+                        if match:
+                            json_str = match.group(0)
+                        # Try parsing as JSON
+                        try:
+                            self.logger.debug(f"Parsing headings JSON from {src}", extra={"json_str": json_str})
+                            headings_json = json.loads(json_str)
+                            headings = headings_json.get('headings', [])
+                        except json.JSONDecodeError:
+                            # Try fixing single quotes and parse again
+                            try:
+                                fixed = json_str.replace("'", '"')
+                                headings_json = json.loads(fixed)
+                                headings = headings_json.get('headings', [])
+                            except Exception:
+                                headings = None
+                            # Try ast.literal_eval as last resort
+                            if headings is None:
+                                try:
+                                    self.logger.error("Failed parsing headings JSON from Ollama, trying ast.literal_eval", extra={"json_str": json_str})
+                                    import ast
+                                    headings_resp = ast.literal_eval(json_str)
+                                    headings = headings_resp['headings']
+                                except Exception:
+                                    self.logger.error("Failed to evaluate headings response", extra={"json_str": json_str})
+                                    headings = None
+                        # Validate headings: must be a list of dicts with 'level' and 'text'
+                        if not isinstance(headings, list) or not all(isinstance(h, dict) and 'level' in h and 'text' in h for h in (headings or [])):
+                            self.logger.warning(f"{src} returned invalid headings, falling back to regex extraction", extra={"headings": headings})
+                            respons_dict[n] = self._fallback_extract_headings(markdown)
+                        else:
+                            respons_dict[n] = headings
+                        break
+                    else:
+                        self.logger.debug(f"Received {n} response from {src}", extra={"response": resp})
+                        self.logger.debug(f"Response length: {len(resp)}:\n {resp[:100]}...", extra={"response": resp})
+                        respons_dict[n] = resp.strip()
+                        break
+                except Exception as e:
+                    last_exception = e
+                    self.logger.warning(f"{src} API call failed for {n} (attempt {attempt+1}/{retries}): {e}")
+                    if attempt < retries - 1:
+                        time.sleep(retry_delay)
             else:
-                respons_dict[n] = resp.strip()
-        
+                # All retries failed
+                if n == 'headings':
+                    respons_dict[n] = self._fallback_extract_headings(markdown)
+                else:
+                    respons_dict[n] = ''
         return respons_dict
     
     def save_markdown_file(self, data: dict, content: str, save_dir: str = './data/markdown_files/'):
