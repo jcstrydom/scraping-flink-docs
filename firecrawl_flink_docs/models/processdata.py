@@ -140,68 +140,45 @@ class ResponseProcessor:
 
     def _request_gemini(self, prompt: str, model: str, api_key: str, timeout: int = 180) -> str:
         """
-        Call Google's Generative Language API (Gemini) using a REST call.
+        Call Gemini using the official google-genai SDK.
         Returns model text content (string) or raises on failure.
         """
-        # Normalize model path: ensure it starts with 'models/'
-        model_path = model
-        if not model_path.startswith('models/'):
-            model_path = f"models/{model_path}"
+        if not api_key:
+            raise ValueError("Missing GOOGLE_GEMINI_API_KEY")
 
-        payload = json.dumps({
-            "prompt": {"text": prompt},
-            "temperature": 0.2,
-            "maxOutputTokens": 512
-        }).encode("utf-8")
+        from google import genai
+        from google.genai import types
 
-        # Try common endpoint versions in order - v1 first, then v1beta2.
-        endpoints = [
-            f"https://generativelanguage.googleapis.com/v1/{model_path}:generate?key={api_key}",
-            f"https://generativelanguage.googleapis.com/v1beta2/{model_path}:generate?key={api_key}",
-        ]
+        # SDK accepts model names like "gemini-1.5-flash"; normalize if caller passed "models/...".
+        model_name = model[7:] if model.startswith("models/") else model
 
-        last_exc = None
-        for url in endpoints:
-            req = urllib.request.Request(url, data=payload, headers={"Content-Type": "application/json"}, method="POST")
-            try:
-                self.logger.debug("Attempting Gemini endpoint", extra={"url": url})
-                with urllib.request.urlopen(req, timeout=timeout) as resp:
-                    resp_text = resp.read().decode("utf-8", errors="replace")
+        client = genai.Client(api_key=api_key)
+        self.logger.debug("Calling Gemini SDK generate_content", extra={"model": model_name, "timeout": timeout})
+        response = client.models.generate_content(
+            model=model_name,
+            contents=prompt,
+            config=types.GenerateContentConfig(
+                temperature=0.2,
+                max_output_tokens=512,
+            ),
+        )
 
-                resp_json = json.loads(resp_text)
-                # Response shape: {"candidates": [{"content": "..."}], ...}
-                if isinstance(resp_json, dict):
-                    candidates = resp_json.get("candidates") or resp_json.get("outputs") or []
-                    if candidates and isinstance(candidates, list):
-                        first = candidates[0]
-                        # candidate could be string or dict with 'content'
-                        if isinstance(first, dict):
-                            return first.get("content", "")
-                        elif isinstance(first, str):
-                            return first
-                return ""
-            except urllib.error.HTTPError as e:
-                body = ''
-                try:
-                    body = e.read().decode('utf-8', errors='ignore') if hasattr(e, 'read') else ''
-                except Exception:
-                    body = ''
-                self.logger.warning("Gemini HTTP error on endpoint", extra={"url": url, "status": getattr(e, 'code', None), "body_snippet": body[:1000]})
-                last_exc = e
-                # If 404, try next endpoint; otherwise re-raise so retries at higher level behave normally
-                if getattr(e, 'code', None) == 404:
-                    continue
-                raise
-            except Exception as e:
-                self.logger.exception("Failed contacting Gemini API for endpoint", extra={"url": url})
-                last_exc = e
-                # try next endpoint
-                continue
+        # Primary SDK surface
+        text = getattr(response, "text", None)
+        if isinstance(text, str) and text.strip():
+            return text
 
-        # If we reach here all endpoints failed
-        if last_exc:
-            raise last_exc
-        return ""
+        # Fallback: reconstruct text from candidates/parts if .text is empty.
+        candidates = getattr(response, "candidates", None) or []
+        parts = []
+        for candidate in candidates:
+            content = getattr(candidate, "content", None)
+            content_parts = getattr(content, "parts", None) or []
+            for part in content_parts:
+                part_text = getattr(part, "text", None)
+                if isinstance(part_text, str) and part_text:
+                    parts.append(part_text)
+        return "\n".join(parts)
 
     def _fallback_extract_headings(self, markdown: str):
         """
@@ -211,12 +188,114 @@ class ResponseProcessor:
         import re
         headings = []
         for line in markdown.splitlines():
-            m = re.match(r'^(#+)\\s+(.*)', line)
+            m = re.match(r'^(#+)\s+(.*)', line)
             if m:
                 level = len(m.group(1))
                 text = m.group(2).strip()
                 headings.append({"level": level, "text": text})
         return headings
+
+    def _normalize_combined_metadata(self, payload: dict, markdown: str) -> dict:
+        slug = str(payload.get("slug", "") or "").strip().lower()
+        slug = re.sub(r"\s+", "", slug)
+        slug = re.sub(r"[^a-z0-9_-]", "", slug)
+
+        summary = str(payload.get("summary", "") or "").strip()
+        summary = re.sub(r"\s+", " ", summary)
+        if len(summary) > 100:
+            summary = summary[:100].rstrip()
+
+        headings = payload.get("headings", [])
+        if isinstance(headings, str):
+            parsed = None
+            try:
+                parsed = json.loads(headings)
+            except Exception:
+                try:
+                    parsed = ast.literal_eval(headings)
+                except Exception:
+                    parsed = None
+            if isinstance(parsed, list):
+                headings = parsed
+
+        if not isinstance(headings, list) or not all(
+            isinstance(h, dict) and isinstance(h.get("level"), int) and isinstance(h.get("text"), str)
+            for h in headings
+        ):
+            headings = self._extract_headings_from_text(str(payload.get("headings", ""))) or self._fallback_extract_headings(markdown)
+
+        return {"slug": slug, "summary": summary, "headings": headings}
+
+    def _extract_headings_from_text(self, text: str):
+        lines = [ln.strip() for ln in text.splitlines() if ln.strip()]
+        headings = []
+        for ln in lines:
+            m_hash = re.match(r"^(#{1,6})\s+(.+)$", ln)
+            if m_hash:
+                headings.append({"level": len(m_hash.group(1)), "text": m_hash.group(2).strip()})
+                continue
+            m_level = re.match(r"(?i)^[-*]?\s*level\s*[:=]\s*(\d+)\s*[,|;]\s*text\s*[:=]\s*(.+)$", ln)
+            if m_level:
+                headings.append({"level": int(m_level.group(1)), "text": m_level.group(2).strip(" \"'")})
+                continue
+            m_hn = re.match(r"(?i)^h([1-6])\s*[:\-]\s*(.+)$", ln)
+            if m_hn:
+                headings.append({"level": int(m_hn.group(1)), "text": m_hn.group(2).strip()})
+        return headings if headings else None
+
+    def _parse_combined_metadata_payload(self, response_text: str, markdown: str):
+        cleaned = response_text.strip()
+        cleaned = re.sub(r"^```json|^```|```$", "", cleaned, flags=re.MULTILINE).strip()
+
+        candidates = [cleaned]
+        match = re.search(r"\{.*\}", cleaned, re.DOTALL)
+        if match:
+            candidates.append(match.group(0))
+
+        for candidate in candidates:
+            payload = None
+            try:
+                payload = json.loads(candidate)
+            except Exception:
+                try:
+                    payload = json.loads(candidate.replace("'", '"'))
+                except Exception:
+                    try:
+                        payload = ast.literal_eval(candidate)
+                    except Exception:
+                        payload = None
+            if isinstance(payload, dict):
+                return self._normalize_combined_metadata(payload, markdown)
+
+        slug_match = re.search(r"(?im)^slug\s*[:=]\s*([a-z0-9_-]+)\s*$", cleaned)
+        summary_match = re.search(r"(?im)^summary\s*[:=]\s*(.+)$", cleaned)
+        headings_block = re.search(r"(?ims)^headings\s*:\s*(.*)$", cleaned)
+        headings_text = headings_block.group(1).strip() if headings_block else ""
+
+        summary_text = summary_match.group(1).strip() if summary_match else ""
+        if not summary_text and cleaned:
+            first_line = cleaned.splitlines()[0].strip()
+            # Use first sentence/line from prose response when model ignores requested structure.
+            summary_text = re.split(r"(?<=[.!?])\s+", first_line, maxsplit=1)[0].strip()
+
+        slug_text = slug_match.group(1).strip() if slug_match else ""
+        if not slug_text:
+            # Prefer first markdown heading as slug source, then summary source.
+            source = ""
+            md_headings = self._fallback_extract_headings(markdown)
+            if md_headings:
+                source = md_headings[0].get("text", "")
+            if not source:
+                source = summary_text
+            words = re.findall(r"[a-z0-9]+", source.lower())
+            slug_text = words[0] if words else ""
+
+        parsed = {
+            "slug": slug_text,
+            "summary": summary_text,
+            "headings": self._extract_headings_from_text(headings_text) or self._fallback_extract_headings(markdown),
+        }
+        return self._normalize_combined_metadata(parsed, markdown)
 
     def extract_summaries_with_ollama(
             self,
@@ -226,7 +305,7 @@ class ResponseProcessor:
             timeout: int = 180,
             retries: int = 3,
             retry_delay: float = 5.0,
-            provider: str = "auto") -> dict:
+            provider: str = "ollama") -> dict:
         """
         Send `markdown` to an Ollama instance and ask for JSON containing:
           - slug: one-word lowercase summary
@@ -281,112 +360,59 @@ class ResponseProcessor:
                     return {"slug": None, "summary": None, "headings": self._fallback_extract_headings(markdown)}
 
 
-        slug_prompt = (
-            "You are senior copy writer. Given the full markdown content, write a specific 'slug' from the page.\n"
-            "A 'slug' is a single-word, lowercase identifier (no spaces) that will specifically summarize the page.\n"
-            "Only respond with this 'slug'.\n\n"
+        combined_prompt = (
+            "You are senior copy writer. Given the full markdown content, return metadata.\n"
+            "Preferred output format: a single JSON object with keys slug, summary, headings.\n"
+            "Rules:\n"
+            "1) slug: one-word, lowercase identifier, no spaces.\n"
+            "2) summary: one concise sentence around 100 characters.\n"
+            "3) headings: list of objects with keys 'level' (integer heading depth from markdown # count) and 'text' (string).\n"
+            "JSON example:\n"
+            "{\"slug\":\"concepts\",\"summary\":\"Overview of Flink concepts and APIs.\",\"headings\":[{\"level\":1,\"text\":\"Concepts\"},{\"level\":2,\"text\":\"Flink APIs\"}]}\n"
+            "If you cannot provide JSON, use EXACTLY this fallback format:\n"
+            "slug: <slug>\n"
+            "summary: <summary>\n"
+            "headings:\n"
+            "H1: <heading text>\n"
+            "H2: <heading text>\n"
+            "Provide only metadata output, no explanations.\n\n"
             "MARKDOWN:\n" + markdown
         )
 
-        summary_prompt = (
-            "You are senior copy writer. Given the full markdown content, create a specific 'summary' that identifies the page.\n"
-            "In this case a 'summary' is a concise specific sentence that identifies the page, and is only around 100 characters long.\n"
-            "Only respond with this 'summary'.\n\n"
-            "MARKDOWN:\n" + markdown
-        )
+        src = 'Ollama' if use_ollama else 'Gemini'
+        self.logger.debug(f"Requesting combined metadata from {src}")
+        self.logger.debug(f"Combined metadata prompt: \n '{combined_prompt[:500]}' \n...")
 
-        headings_prompt = (
-            "You are senior copy writer. Given the full markdown content, extract all headings from the page.\n"
-            "Each heading must be described by a:\n"
-            " * 'level' - which is the index of the heading on the page (type=integer)\n"
-            " * 'text' - the text of the heading (type=string)\n"
-            "Example: {\"headings\":[{\"level\":1,\"text\":\"Concepts\"},{\"level\":2,\"text\":\"Flink’s APIs\"}]}\n"
-            "Respond with a valid JSON payload providing the top-level 'headings' key, with it's list.\n"
-            "ONLY provide JSON object, with no back-ticks and no further description.\n\n"
-            "MARKDOWN:\n" + markdown
-        )
-
-        respons_dict = {}
-        for n, prompt in zip(['slug', 'summary', 'headings'], [slug_prompt, summary_prompt, headings_prompt]):
-            src = 'Ollama' if use_ollama else 'Gemini'
-            self.logger.debug(f"Requesting {n} from {src}")
-            self.logger.debug(f"Requesting {n} prompt: \n '{prompt[:500]}' \n...")
-            last_exception = None
-            for attempt in range(retries):
-                try:
-                    self.logger.debug(f"{src} API call for {n}, attempt {attempt+1}/{retries}")
-                    if use_ollama:
-                        resp = self._request_ollama(prompt, model, host, timeout)
-                    else:
-                        # Use Gemini via REST API. If provided `model` doesn't look like a Gemini name,
-                        # fall back to a sensible default.
-                        if model and model.startswith('models/'):
-                            gemini_model = model
-                        else:
-                            gemini_model = 'models/text-bison-001'
-                        api_key = gemini_key or os.environ.get('GOOGLE_GEMINI_API_KEY')
-                        resp = self._request_gemini(prompt, gemini_model, api_key, timeout)
-                    self.logger.debug(f"{src} API call for {n} succeeded", extra={"response": resp})
-                    self.logger.debug(f"Response [length={len(resp)}]: \n '{resp}' \n...")
-                    if n == 'headings':
-                        self.logger.debug(f"Received headings response from {src}", extra={"response": resp})
-                        self.logger.debug(f"Response [length={len(resp)}]: \n '{resp}' \n...")
-                        # Try to extract JSON object from response
-                        import re
-                        json_str = resp
-                        # Remove code block markers if present
-                        json_str = re.sub(r'^```json|^```|```$', '', json_str.strip(), flags=re.MULTILINE).strip()
-                        # Try to extract JSON object from within extra text
-                        match = re.search(r'\{.*\}', json_str, re.DOTALL)
-                        if match:
-                            json_str = match.group(0)
-                        # Try parsing as JSON
-                        try:
-                            self.logger.debug(f"Parsing headings JSON from {src}", extra={"json_str": json_str})
-                            headings_json = json.loads(json_str)
-                            headings = headings_json.get('headings', [])
-                        except json.JSONDecodeError:
-                            # Try fixing single quotes and parse again
-                            try:
-                                fixed = json_str.replace("'", '"')
-                                headings_json = json.loads(fixed)
-                                headings = headings_json.get('headings', [])
-                            except Exception:
-                                headings = None
-                            # Try ast.literal_eval as last resort
-                            if headings is None:
-                                try:
-                                    self.logger.error("Failed parsing headings JSON from Ollama, trying ast.literal_eval", extra={"json_str": json_str})
-                                    import ast
-                                    headings_resp = ast.literal_eval(json_str)
-                                    headings = headings_resp['headings']
-                                except Exception:
-                                    self.logger.error("Failed to evaluate headings response", extra={"json_str": json_str})
-                                    headings = None
-                        # Validate headings: must be a list of dicts with 'level' and 'text'
-                        if not isinstance(headings, list) or not all(isinstance(h, dict) and 'level' in h and 'text' in h for h in (headings or [])):
-                            self.logger.warning(f"{src} returned invalid headings, falling back to regex extraction", extra={"headings": headings})
-                            respons_dict[n] = self._fallback_extract_headings(markdown)
-                        else:
-                            respons_dict[n] = headings
-                        break
-                    else:
-                        self.logger.debug(f"Received {n} response from {src}", extra={"response": resp})
-                        self.logger.debug(f"Response length: {len(resp)}:\n {resp[:100]}...", extra={"response": resp})
-                        respons_dict[n] = resp.strip()
-                        break
-                except Exception as e:
-                    last_exception = e
-                    self.logger.warning(f"{src} API call failed for {n} (attempt {attempt+1}/{retries}): {e}")
-                    if attempt < retries - 1:
-                        time.sleep(retry_delay)
-            else:
-                # All retries failed
-                if n == 'headings':
-                    respons_dict[n] = self._fallback_extract_headings(markdown)
+        for attempt in range(retries):
+            try:
+                self.logger.debug(f"{src} API call for combined metadata, attempt {attempt+1}/{retries}")
+                if use_ollama:
+                    resp = self._request_ollama(combined_prompt, model, host, timeout)
                 else:
-                    respons_dict[n] = ''
-        return respons_dict
+                    # Use Gemini via REST API. If provided `model` doesn't look like a Gemini name,
+                    # fall back to a sensible default.
+                    if model and model.startswith('models/'):
+                        gemini_model = model
+                    else:
+                        gemini_model = 'models/gemini-2.0-flash'
+                    api_key = gemini_key or os.environ.get('GOOGLE_GEMINI_API_KEY')
+                    resp = self._request_gemini(combined_prompt, gemini_model, api_key, timeout)
+
+                self.logger.debug(f"{src} combined metadata response received", extra={"response": resp[:2000]})
+                parsed = self._parse_combined_metadata_payload(resp, markdown)
+                if not parsed.get("slug") and not parsed.get("summary") and not parsed.get("headings"):
+                    raise ValueError("Could not parse combined metadata payload")
+                return parsed
+            except Exception as e:
+                self.logger.warning(f"{src} API call failed for combined metadata (attempt {attempt+1}/{retries}): {e}")
+                if attempt < retries - 1:
+                    time.sleep(retry_delay)
+
+        return {
+            "slug": "",
+            "summary": "",
+            "headings": self._fallback_extract_headings(markdown)
+        }
     
     def save_markdown_file(self, data: dict, content: str, save_dir: str = './data/markdown_files/'):
         
