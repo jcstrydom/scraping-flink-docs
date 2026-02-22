@@ -1,208 +1,100 @@
-# Quick Start Guide: ScrapingOrchestrator
+# Quick Start Guide
 
-## 30-Second Setup
+## 1) Install + Env
+
+```bash
+uv sync
+```
+
+Create `.env` in repo root:
+
+```bash
+FIRECRAWL_API_KEY=your_key_here
+# Optional for Gemini fallback:
+# GOOGLE_GEMINI_API_KEY=...
+```
+
+## 2) Minimal Usage
 
 ```python
-from models import ScrapingOrchestrator
+from firecrawl_flink_docs.models import ScrapingOrchestrator
 import os
 
-# Initialize
 orch = ScrapingOrchestrator(
-    firecrawl_api_key=os.getenv('FIRECRAWL_API_KEY'),
-    root_url='https://example.com/docs/',
-    ask_ollama=False
+    firecrawl_api_key=os.getenv("FIRECRAWL_API_KEY"),
+    root_url="https://nightlies.apache.org/flink/flink-docs-release-1.20/docs/concepts/overview/",
+    ask_ollama=False,
 )
 
-# Scrape a URL (saves to DB + markdown file)
-metadata = orch.scrape_and_persist('https://example.com/docs/page1')
-
-# Add child URLs to queue
+metadata = orch.scrape_and_persist(orch.root_url)
 if metadata and metadata.child_urls:
     orch.add_urls_to_queue(metadata.child_urls)
 
-# Scrape batch from queue
 stats = orch.scrape_batch(max_urls=5)
-print(f"Scraped {stats['scraped']} pages")
+print(stats)
 ```
 
-## Three Main Use Cases
+## 3) Run Example Script
 
-### Use Case 1: Single URL Scrape
-```python
-metadata = orch.scrape_and_persist(url)
-# ✅ Fetches page
-# ✅ Saves markdown file to ./data/markdown_files/
-# ✅ Saves metadata to ./data/scraping.db
-# ✅ Returns PageMetadata object
+```bash
+uv run python firecrawl_flink_docs/example-scrape_with_orchestrator.py
 ```
 
-### Use Case 2: Prevent Re-scraping
+## 4) Common Patterns
+
+### Resume across sessions
+
 ```python
-if not orch.has_been_scraped(url):
-    orch.scrape_and_persist(url)
-# Checks both in-memory cache and database
-# Smart URL normalization handles URL variations
+orch = ScrapingOrchestrator(api_key, root_url)
+print(orch.get_scraping_stats())
 ```
 
-### Use Case 3: Traverse and Queue
-```python
-root = orch.scrape_and_persist(root_url)
-if root.child_urls:
-    orch.add_urls_to_queue(root.child_urls)
+The orchestrator loads already-scraped URLs from DB by default.
 
+### Full traversal from root
+
+```python
+stats = orch.scrape_from_root(max_depth=3)
+print(stats)
+```
+
+### Keep scraping in small batches
+
+```python
 while orch.queue_size() > 0:
     stats = orch.scrape_batch(max_urls=10)
-    print(f"Scraped {stats['scraped']}, {stats['queue_remaining']} left")
+    print(stats)
 ```
 
-## Database Location
+## 5) Where data is saved
 
-SQLite database: `./data/scraping.db`
+- SQLite DB: `firecrawl_flink_docs/data/scraping.db`
+- Markdown files: `firecrawl_flink_docs/data/markdown_files/`
 
-Query with Python:
+## 6) Useful DB calls
+
 ```python
-# Get all scraped pages
 pages = orch.db_manager.get_all_pages()
-for p in pages:
-    print(p.title, p.url)
-
-# Get pages by version
-pages = orch.db_manager.get_pages_by_version('flink-docs-release-1.20')
-
-# Check if URL exists
-exists = orch.db_manager.url_exists('https://example.com/page')
+page = orch.db_manager.get_page_by_url("https://example.com")
+exists = orch.db_manager.url_exists("https://example.com")
 ```
 
-## Common Patterns
-
-### Pattern 1: Resume Scraping (Session Persistence)
-```python
-# Session 1: Scrape and stop
-orch = ScrapingOrchestrator(api_key, root_url)
-orch.scrape_batch(max_urls=5)  # Saves to DB
-
-# Session 2: Resume later
-orch = ScrapingOrchestrator(api_key, root_url)  # Loads from DB
-stats = orch.get_scraping_stats()
-print(f"Previously scraped {stats['total_scraped_urls']} URLs")
-orch.scrape_batch(max_urls=5)  # Continue
-```
-
-### Pattern 2: Avoid API Quota Limits
-```python
-# Scrape in small batches to avoid quota
-for i in range(100):
-    stats = orch.scrape_batch(max_urls=2)
-    if stats['failed'] > 0:
-        print(f"Errors detected, pausing...")
-        break
-```
-
-### Pattern 3: Full Site Traversal
-```python
-# Traverse up to 3 levels deep
-stats = orch.scrape_from_root(max_depth=3)
-print(f"Total: {stats['total_scraped']} pages")
-```
-
-### Pattern 4: Selective Scraping
-```python
-# Only scrape certain URL patterns
-for text, url in some_urls:
-    # Skip URLs matching pattern
-    if '/api/' not in url:
-        orch.add_urls_to_queue([(text, url)])
-
-stats = orch.scrape_batch()
-```
-
-## Monitoring Progress
+## 7) Clean existing heading text in DB
 
 ```python
-# Quick stats
-stats = orch.get_scraping_stats()
-print(f"📊 Progress:")
-print(f"   Scraped: {stats['total_scraped_urls']}")
-print(f"   Failed: {stats['failed_urls']}")
-print(f"   Pending: {stats['queue_pending']}")
-print(f"   DB Location: {stats['database_location']}")
-
-# Queue size
-print(f"Queue: {orch.queue_size()} URLs remaining")
-
-# Failed URLs
-print(f"Failed URLs: {orch.failed_urls}")
+result = orch.db_manager.clean_headings_text_links()
+print(result)
 ```
+
+This removes markdown links and raw URLs from `headings[*].text`.
 
 ## Troubleshooting
 
-### Problem: "URL already scraped, skipping"
-→ This is normal behavior. The system prevents duplicate scrapes.
+### "URL already scraped, skipping"
+Expected deduplication behavior.
 
-### Problem: Database locked
-→ Make sure `./data/` is writable and you're not running multiple instances
+### API quota/rate pressure
+Use lower `max_urls` in `scrape_batch()`.
 
-### Problem: Ollama timeout
-→ Set `ask_ollama=False` when initializing orchestrator
-
-### Problem: API rate limit
-→ Use smaller `max_urls` values in `scrape_batch()`
-
-## What Gets Saved
-
-### Files
-- **Markdown files**: `./data/markdown_files/{prefix}_{page_id}.md`
-- **Database**: `./data/scraping.db`
-
-### Database Columns
-| Column | Purpose |
-|--------|---------|
-| `page_id` | SHA256 hash of URL (unique ID) |
-| `url` | Full normalized URL |
-| `title` | Page title from metadata |
-| `version` | Flink version |
-| `child_urls` | JSON list of (text, url) tuples |
-| `is_root_url` | Boolean |
-| `scrape_timestamp` | When page was scraped |
-
-## API Cheat Sheet
-
-```python
-# Initialization
-orch = ScrapingOrchestrator(firecrawl_api_key, root_url)
-
-# Scraping
-metadata = orch.scrape_and_persist(url)           # Single URL
-stats = orch.scrape_batch(max_urls=5)             # Batch from queue
-stats = orch.scrape_from_root(max_depth=2)        # Full traversal
-
-# Queue Management
-orch.add_urls_to_queue([(text, url), ...])        # Add URLs
-next_url = orch.get_next_url()                    # Get next
-orch.queue_size()                                 # Queue length
-
-# Deduplication
-orch.has_been_scraped(url)                        # Check if done
-
-# Database Queries
-pages = orch.db_manager.get_all_pages()           # All pages
-pages = orch.db_manager.get_pages_by_version(v)   # Filter by version
-page = orch.db_manager.get_page_by_url(url)       # Get one page
-
-# Statistics
-stats = orch.get_scraping_stats()                 # Overview
-```
-
-## Examples in the Repo
-
-1. **Notebook**: `dev-notebook.ipynb` - 6 complete examples
-2. **Script**: `scrape_with_orchestrator.py` - Production-ready example
-3. **Full Guide**: `ORCHESTRATOR_GUIDE.md` - Detailed documentation
-
-## Questions?
-
-Check `ORCHESTRATOR_GUIDE.md` for:
-- Detailed method signatures
-- Workflow diagrams
-- Best practices
-- Advanced features
+### Ollama unavailable
+Initialize with `ask_ollama=False`.

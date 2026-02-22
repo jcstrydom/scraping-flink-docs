@@ -7,6 +7,7 @@ from sqlalchemy.orm import declarative_base, Session, relationship
 from datetime import datetime
 from pathlib import Path
 import logging
+import re
 
 Base = declarative_base()
 
@@ -43,6 +44,104 @@ class PageRecord(Base):
 
 
 class DatabaseManager:
+    def _strip_links_from_text(self, text: str) -> str:
+        """
+        Remove markdown/URL links from heading text and return plain text.
+        """
+        if not isinstance(text, str):
+            return text
+
+        cleaned = text
+
+        # Replace markdown links with their visible label: [label](url) -> label
+        cleaned = re.sub(r"\[([^\]]+)\]\(([^)]+)\)", r"\1", cleaned)
+
+        # Remove bare URLs and angle-bracket links.
+        cleaned = re.sub(r"<https?://[^>\s]+>", "", cleaned)
+        cleaned = re.sub(r"https?://\S+", "", cleaned)
+
+        # Undo common markdown escaping and remove trailing anchor hash artifacts.
+        cleaned = cleaned.replace("\\#", "#")
+        cleaned = re.sub(r"\s+#\s*$", "", cleaned)
+
+        # Normalize spacing.
+        cleaned = re.sub(r"\s+", " ", cleaned).strip()
+        return cleaned
+
+    def clean_headings_text_links(self, session: Session = None) -> dict:
+        """
+        Clean links from `headings[*].text` for all pages in the DB.
+
+        Returns:
+            Dict with counters: {"processed_rows": int, "updated_rows": int, "updated_headings": int}
+        """
+        close_session = False
+        if session is None:
+            session = self.get_session()
+            close_session = True
+
+        processed_rows = 0
+        updated_rows = 0
+        updated_headings = 0
+
+        try:
+            pages = session.query(PageRecord).all()
+            for page in pages:
+                processed_rows += 1
+
+                if not isinstance(page.headings, list):
+                    continue
+
+                row_changed = False
+                cleaned_headings = []
+
+                for heading in page.headings:
+                    if not isinstance(heading, dict):
+                        cleaned_headings.append(heading)
+                        continue
+
+                    text = heading.get("text")
+                    if not isinstance(text, str):
+                        cleaned_headings.append(heading)
+                        continue
+
+                    cleaned_text = self._strip_links_from_text(text)
+                    if cleaned_text != text:
+                        row_changed = True
+                        updated_headings += 1
+
+                    updated_heading = dict(heading)
+                    updated_heading["text"] = cleaned_text
+                    cleaned_headings.append(updated_heading)
+
+                if row_changed:
+                    page.headings = cleaned_headings
+                    updated_rows += 1
+
+            if updated_rows > 0:
+                session.commit()
+
+            self.logger.info(
+                "Headings text cleanup finished",
+                extra={
+                    "processed_rows": processed_rows,
+                    "updated_rows": updated_rows,
+                    "updated_headings": updated_headings,
+                },
+            )
+            return {
+                "processed_rows": processed_rows,
+                "updated_rows": updated_rows,
+                "updated_headings": updated_headings,
+            }
+        except Exception:
+            session.rollback()
+            self.logger.exception("Failed cleaning headings text links")
+            raise
+        finally:
+            if close_session:
+                session.close()
+
     def get_unprocessed_pages(self, session: Session = None) -> list:
         """
         Get all pages missing summary, slug, headings, or content_hash.
