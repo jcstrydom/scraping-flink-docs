@@ -7,7 +7,7 @@ Run this to scrape Flink docs with automatic persistence and deduplication.
 import logging
 import os
 import dotenv
-from models import ScrapingOrchestrator
+from firecrawl_scraper.models import ScrapingOrchestrator
 
 # Load environment variables
 dotenv.load_dotenv(dotenv.find_dotenv(".env"))
@@ -31,7 +31,7 @@ def main():
     orchestrator = ScrapingOrchestrator(
         firecrawl_api_key=FIRECRAWL_API_KEY,
         root_url=root_url,
-        db_path=None,  # Uses default: ./data/scraping.db
+        db_path=None,  # Uses default: <repo_root>/data/scraping.db
         log_level=logging.INFO,
         ask_ollama=False  # Set to True if Ollama is running for summaries
     )

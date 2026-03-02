@@ -1,10 +1,11 @@
-import os
 import json
 from pathlib import Path
-from firecrawl_flink_docs.models.processdata import ResponseProcessor
+from firecrawl_scraper.models.processdata import ResponseProcessor
 
 # Directory containing markdown files
-data_dir = Path(__file__).parent.parent / "data/markdown_files"
+SCRIPT_DIR = Path(__file__).resolve().parent
+PROJECT_ROOT = SCRIPT_DIR.parent.parent
+data_dir = PROJECT_ROOT / "data" / "markdown_files"
 md_files = sorted(data_dir.glob("*.md"))[:5]
 
 processor = ResponseProcessor()

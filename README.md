@@ -4,8 +4,8 @@ Scraper/orchestrator project for Apache Flink docs, built around Firecrawl + SQL
 
 It provides:
 - Structured page scraping via `ScrapingOrchestrator`
-- Persistent metadata in SQLite (`firecrawl_flink_docs/data/scraping.db`)
-- Markdown storage (`firecrawl_flink_docs/data/markdown_files/`)
+- Persistent metadata in SQLite (`data/scraping.db`)
+- Markdown storage (`data/markdown_files/`)
 - URL deduplication and traversal queueing
 - Optional metadata enrichment (`slug`, `summary`, `headings`) via Ollama/Gemini fallback logic in `ResponseProcessor`
 
@@ -27,9 +27,14 @@ It provides:
 - Deduplication is in-memory for current run; existing URLs can be loaded from DB at startup (`load_existing_urls=True`)
 
 ### 3. Storage model
-- DB file: `firecrawl_flink_docs/data/scraping.db`
-- Markdown files: `firecrawl_flink_docs/data/markdown_files/{prefix}_{page_id}.md`
+- DB file: `data/scraping.db`
+- Markdown files: `data/markdown_files/{prefix}_{page_id}.md`
 - ORM table: `pages` (`PageRecord`)
+
+`page_id` note:
+- New writes use SHA-256 of the canonical URL as `page_id`.
+- Existing rows/files are intentionally not auto-migrated.
+- Filenames keep a human-readable prefix: `{prefix}_{page_id}.md`.
 
 Important `pages` columns:
 - `page_id`, `url`, `title`, `version`, `prefix`
@@ -44,7 +49,7 @@ Important `pages` columns:
 Use:
 
 ```python
-from firecrawl_flink_docs.models import DatabaseManager
+from firecrawl_scraper.models import DatabaseManager
 
 result = DatabaseManager().clean_headings_text_links()
 print(result)
@@ -59,18 +64,22 @@ print(result)
 │   ├── QUICKSTART.md
 │   ├── ORCHESTRATOR_GUIDE.md
 │   └── VISUAL_GUIDE.md
-├── firecrawl_flink_docs/
+├── notebooks/
+│   ├── dev-notebook.ipynb
+│   └── example-orchestrator.ipynb
+├── scripts/
+│   └── single_use_scripts/
+├── data/
+│   ├── scraping.db
+│   └── markdown_files/
+├── firecrawl_scraper/
 │   ├── models/
 │   │   ├── __init__.py
 │   │   ├── orchestrator.py
 │   │   ├── database.py
 │   │   ├── processdata.py
 │   │   └── metadata.py
-│   ├── data/
-│   │   ├── scraping.db
-│   │   └── markdown_files/
-│   ├── example-scrape_with_orchestrator.py
-│   └── dev-notebook.ipynb
+│   └── example-scrape_with_orchestrator.py
 └── pyproject.toml
 ```
 
@@ -99,7 +108,7 @@ FIRECRAWL_API_KEY=your_key_here
 ## Quick Usage
 
 ```python
-from firecrawl_flink_docs.models import ScrapingOrchestrator
+from firecrawl_scraper.models import ScrapingOrchestrator
 import os
 
 orch = ScrapingOrchestrator(
@@ -119,12 +128,12 @@ print(stats)
 Run the bundled example:
 
 ```bash
-uv run python firecrawl_flink_docs/example-scrape_with_orchestrator.py
+uv run python firecrawl_scraper/example-scrape_with_orchestrator.py
 ```
 
 ## Runtime APIs
 
-Main class: `firecrawl_flink_docs/models/orchestrator.py`
+Main class: `firecrawl_scraper/models/orchestrator.py`
 - `scrape_and_persist(url)`
 - `add_urls_to_queue(urls)`
 - `scrape_batch(max_urls=None, stop_on_failure=False)`
@@ -133,7 +142,7 @@ Main class: `firecrawl_flink_docs/models/orchestrator.py`
 - `get_scraping_stats()`
 - `to_dict(include_queue=False, queue_preview=20)`
 
-DB class: `firecrawl_flink_docs/models/database.py`
+DB class: `firecrawl_scraper/models/database.py`
 - `save_page_metadata(metadata_dict)`
 - `update_page_fields_by_page_id(page_id, update_fields)`
 - `get_all_pages()` / `get_page_by_url(url)` / `url_exists(url)`
@@ -144,6 +153,7 @@ DB class: `firecrawl_flink_docs/models/database.py`
 - `documentation/QUICKSTART.md`: shortest path to run the project
 - `documentation/ORCHESTRATOR_GUIDE.md`: method-by-method API behavior and examples
 - `documentation/VISUAL_GUIDE.md`: architecture and flow diagrams
+- `documentation/MAINTAINER_CONTEXT.md`: key invariants, paths, and validation commands for future sessions
 
 ## Notes
 - Scraping scope defaults to the root host and `/docs/` path unless overridden with `allowed_domain` or `allow_outside_domain=True`.

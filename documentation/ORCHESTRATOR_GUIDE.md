@@ -5,10 +5,10 @@
 `ScrapingOrchestrator` coordinates scraping, parsing, persistence, deduplication, and queue traversal.
 
 Primary modules:
-- `firecrawl_flink_docs/models/orchestrator.py`
-- `firecrawl_flink_docs/models/database.py`
-- `firecrawl_flink_docs/models/processdata.py`
-- `firecrawl_flink_docs/models/metadata.py`
+- `firecrawl_scraper/models/orchestrator.py`
+- `firecrawl_scraper/models/database.py`
+- `firecrawl_scraper/models/processdata.py`
+- `firecrawl_scraper/models/metadata.py`
 
 ## Constructor
 
@@ -26,7 +26,7 @@ ScrapingOrchestrator(
 ```
 
 Notes:
-- If `db_path` is not set, default DB is `firecrawl_flink_docs/data/scraping.db`.
+- If `db_path` is not set, default DB is `data/scraping.db`.
 - Scope defaults to same host as `root_url` under `/docs/` path.
 - `load_existing_urls=True` seeds in-memory dedupe from DB on startup.
 
@@ -114,7 +114,7 @@ Returns a serializable runtime snapshot, including config/scope fields and optio
 ## End-to-End Example
 
 ```python
-from firecrawl_flink_docs.models import ScrapingOrchestrator
+from firecrawl_scraper.models import ScrapingOrchestrator
 import os
 
 orch = ScrapingOrchestrator(

@@ -168,11 +168,11 @@ class DatabaseManager:
         Initialize database manager.
         
         Args:
-            db_path: Path to SQLite database file. Defaults to ./data/scraping.db
+            db_path: Path to SQLite database file. Defaults to <repo_root>/data/scraping.db
         """
         if db_path is None:
-            script_dir = Path(__file__).parent.parent
-            db_path = script_dir / "data" / "scraping.db"
+            project_root = Path(__file__).resolve().parents[2]
+            db_path = project_root / "data" / "scraping.db"
         
         self.db_path = Path(db_path)
         self.db_path.parent.mkdir(parents=True, exist_ok=True)

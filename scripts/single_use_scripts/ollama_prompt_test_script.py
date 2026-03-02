@@ -1,18 +1,14 @@
 import argparse
-import ast, sys
+import ast
 from pathlib import Path
 import dotenv
 import logging
 
-# Ensure parent directory is in sys.path for module imports
-SCRIPT_DIR = Path(__file__).resolve().parent
-PROJECT_ROOT = SCRIPT_DIR.parent
-if str(PROJECT_ROOT) not in sys.path:
-    sys.path.insert(0, str(PROJECT_ROOT))
-
-from models.processdata import ResponseProcessor
+from firecrawl_scraper.models.processdata import ResponseProcessor
 import os
-dotenv.load_dotenv(dotenv.find_dotenv("firecrawl-flink_docs/.env"))
+SCRIPT_DIR = Path(__file__).resolve().parent
+PROJECT_ROOT = SCRIPT_DIR.parent.parent
+dotenv.load_dotenv((PROJECT_ROOT / ".env").as_posix())
 
 proc = ResponseProcessor(
     root_url="https://nightlies.apache.org/flink/flink-docs-release-1.20/docs/concepts/overview/",
@@ -29,8 +25,8 @@ def retrieve_persisted_response():
     # Simulate retrieval of persisted response
     base_path = os.path.dirname(os.path.abspath(__file__))
     
-    md_file = os.path.join(base_path, '../data/flink_firecrawl_markdown.md')
-    response_file = os.path.join(base_path, '../data/flink_firecrawl_response_full.txt')
+    md_file = os.path.join(base_path, '../../data/flink_firecrawl_markdown.md')
+    response_file = os.path.join(base_path, '../../data/flink_firecrawl_response_full.txt')
     
     with open(md_file, 'r') as f:
         lines = f.readlines()
