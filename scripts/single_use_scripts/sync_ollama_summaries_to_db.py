@@ -3,22 +3,18 @@ import hashlib
 import json
 import os
 import re
-import sys
 from pathlib import Path
 import dotenv
 
-# Ensure parent directory is in sys.path for module imports
-SCRIPT_DIR = Path(__file__).resolve().parent
-PROJECT_ROOT = SCRIPT_DIR.parent
-if str(PROJECT_ROOT) not in sys.path:
-    sys.path.insert(0, str(PROJECT_ROOT))
-
-from models.processdata import ResponseProcessor
-from models.database import DatabaseManager
+from firecrawl_scraper.models.processdata import ResponseProcessor
+from firecrawl_scraper.models.database import DatabaseManager
 
 # Path to markdown files and database
-MARKDOWN_DIR = os.path.join(os.path.dirname(__file__), '../data/markdown_files')
-DB_PATH = os.path.join(os.path.dirname(__file__), '../data/scraping.db')
+SCRIPT_DIR = Path(__file__).resolve().parent
+PROJECT_ROOT = SCRIPT_DIR.parent.parent
+DATA_DIR = PROJECT_ROOT / "data"
+MARKDOWN_DIR = DATA_DIR / "markdown_files"
+DB_PATH = DATA_DIR / "scraping.db"
 
 def extract_page_id_from_filename(filename):
     # Assumes page_id is the last part before .md
@@ -70,13 +66,13 @@ def parse_args():
 def main():
     args = parse_args()
     if args.provider == "gemini":
-        dotenv_path = Path(__file__).resolve().parent.parent / ".env"
+        dotenv_path = PROJECT_ROOT / ".env"
         dotenv.load_dotenv(dotenv_path.as_posix())
         if not os.environ.get("GOOGLE_GEMINI_API_KEY"):
             print(f"Missing GOOGLE_GEMINI_API_KEY in {dotenv_path}; aborting Gemini run.")
             return
 
-    db = DatabaseManager(DB_PATH)
+    db = DatabaseManager(DB_PATH.as_posix())
     processor = ResponseProcessor()
     all_pages = db.get_all_pages()
     eligible_pages = [p for p in all_pages if _needs_metadata_refresh(p)]
@@ -105,7 +101,7 @@ def main():
             skipped_missing_md += 1
             continue
 
-        md_path = os.path.join(MARKDOWN_DIR, fname)
+        md_path = MARKDOWN_DIR / fname
         with open(md_path, 'r', encoding='utf-8') as f:
             md_content = f.read()
 

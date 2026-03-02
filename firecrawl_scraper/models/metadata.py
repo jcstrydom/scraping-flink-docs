@@ -2,23 +2,13 @@ from __future__ import annotations
 from typing import List, Tuple, Optional
 from datetime import datetime, timezone
 import hashlib
-import urllib.parse
 
 from pydantic import BaseModel, Field, HttpUrl, field_validator, model_validator
+from .url_utils import normalize_url
 
 
 def _normalize_url(raw: Optional[str]) -> Optional[str]:
-    if raw is None:
-        return None
-    parts = urllib.parse.urlsplit(str(raw))
-    scheme = parts.scheme.lower()
-    netloc = parts.netloc.lower()
-    if (scheme == "http" and netloc.endswith(":80")) or (scheme == "https" and netloc.endswith(":443")):
-        netloc = netloc.rsplit(":", 1)[0]
-    path = parts.path or "/"
-    # remove fragment and trailing slash
-    normalized = urllib.parse.urlunsplit((scheme, netloc, path.rstrip("/"), "", ""))
-    return normalized
+    return normalize_url(raw)
 
 
 class PageMetadata(BaseModel):

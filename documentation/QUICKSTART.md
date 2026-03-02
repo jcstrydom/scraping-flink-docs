@@ -17,7 +17,7 @@ FIRECRAWL_API_KEY=your_key_here
 ## 2) Minimal Usage
 
 ```python
-from firecrawl_flink_docs.models import ScrapingOrchestrator
+from firecrawl_scraper.models import ScrapingOrchestrator
 import os
 
 orch = ScrapingOrchestrator(
@@ -37,7 +37,7 @@ print(stats)
 ## 3) Run Example Script
 
 ```bash
-uv run python firecrawl_flink_docs/example-scrape_with_orchestrator.py
+uv run python firecrawl_scraper/example-scrape_with_orchestrator.py
 ```
 
 ## 4) Common Patterns
@@ -68,8 +68,8 @@ while orch.queue_size() > 0:
 
 ## 5) Where data is saved
 
-- SQLite DB: `firecrawl_flink_docs/data/scraping.db`
-- Markdown files: `firecrawl_flink_docs/data/markdown_files/`
+- SQLite DB: `data/scraping.db`
+- Markdown files: `data/markdown_files/`
 
 ## 6) Useful DB calls
 

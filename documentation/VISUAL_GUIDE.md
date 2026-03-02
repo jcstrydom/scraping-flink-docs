@@ -13,8 +13,8 @@ ScrapingOrchestrator
    |-- URL Queue (FIFO traversal)
    v
 Storage
-   |-- firecrawl_flink_docs/data/scraping.db
-   `-- firecrawl_flink_docs/data/markdown_files/*.md
+   |-- data/scraping.db
+   `-- data/markdown_files/*.md
 ```
 
 ## Single URL Flow

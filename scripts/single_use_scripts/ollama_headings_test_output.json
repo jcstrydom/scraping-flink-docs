@@ -1,0 +1,359 @@
+[
+  {
+    "file": "concepts_flink_architecture_5ab3a709ee362ae9e1656235c806d29449f53047ba9b6940f3ecbaba50b322e0.md",
+    "ollama_response": {
+      "slug": "flink-architecture",
+      "summary": "Overview of Flink architecture and its main components.",
+      "headings": [
+        {
+          "level": 1,
+          "text": "Flink Architecture"
+        },
+        {
+          "level": 2,
+          "text": "Anatomy of a Flink Cluster"
+        },
+        {
+          "level": 3,
+          "text": "JobManager"
+        },
+        {
+          "level": 4,
+          "text": "ResourceManager"
+        },
+        {
+          "level": 5,
+          "text": "Dispatcher"
+        },
+        {
+          "level": 6,
+          "text": "JobMaster"
+        },
+        {
+          "level": 3,
+          "text": "TaskManagers"
+        },
+        {
+          "level": 4,
+          "text": "Tasks and Operator Chains"
+        },
+        {
+          "level": 5,
+          "text": "Task Slots and Resources"
+        },
+        {
+          "level": 2,
+          "text": "Flink Application Execution"
+        },
+        {
+          "level": 3,
+          "text": "Flink Application Cluster"
+        },
+        {
+          "level": 3,
+          "text": "Flink Session Cluster"
+        }
+      ]
+    }
+  },
+  {
+    "file": "concepts_overview_d699b5373c84d3776703d9c89d472a1ecee196e604219eb74f8e5647e6a4513c.md",
+    "ollama_response": {
+      "slug": "concepts",
+      "summary": "Overview of Flink concepts and APIs.",
+      "headings": [
+        {
+          "level": 1,
+          "text": "Concepts"
+        },
+        {
+          "level": 2,
+          "text": "Flink APIs"
+        },
+        {
+          "level": 3,
+          "text": "Programming levels of abstraction"
+        },
+        {
+          "level": 2,
+          "text": "Core APIs"
+        },
+        {
+          "level": 3,
+          "text": "DataStream API"
+        },
+        {
+          "level": 3,
+          "text": "DataSet API"
+        },
+        {
+          "level": 3,
+          "text": "Table API"
+        },
+        {
+          "level": 4,
+          "text": "SQL"
+        }
+      ]
+    }
+  },
+  {
+    "file": "concepts_stateful_stream_processing_2242824968fe3664ac00b3506911daf8e28b527e9f76a7f85c2c04e20e9ff783.md",
+    "ollama_response": {
+      "slug": "stateful",
+      "summary": "This text provides an extensive overview of state and fault tolerance in Flink, a popular open-sourc",
+      "headings": [
+        {
+          "level": 1,
+          "text": "Stateful Stream Processing  [\\#](https://nightlies.apache.org/flink/flink-docs-release-1.20/docs/concepts/stateful-stream-processing/\\#stateful-stream-processing)"
+        },
+        {
+          "level": 2,
+          "text": "What is State?  [\\#](https://nightlies.apache.org/flink/flink-docs-release-1.20/docs/concepts/stateful-stream-processing/\\#what-is-state)"
+        },
+        {
+          "level": 2,
+          "text": "Keyed State  [\\#](https://nightlies.apache.org/flink/flink-docs-release-1.20/docs/concepts/stateful-stream-processing/\\#keyed-state)"
+        },
+        {
+          "level": 2,
+          "text": "State Persistence  [\\#](https://nightlies.apache.org/flink/flink-docs-release-1.20/docs/concepts/stateful-stream-processing/\\#state-persistence)"
+        },
+        {
+          "level": 3,
+          "text": "Checkpointing  [\\#](https://nightlies.apache.org/flink/flink-docs-release-1.20/docs/concepts/stateful-stream-processing/\\#checkpointing)"
+        },
+        {
+          "level": 4,
+          "text": "Barriers  [\\#](https://nightlies.apache.org/flink/flink-docs-release-1.20/docs/concepts/stateful-stream-processing/\\#barriers)"
+        },
+        {
+          "level": 4,
+          "text": "Snapshotting Operator State  [\\#](https://nightlies.apache.org/flink/flink-docs-release-1.20/docs/concepts/stateful-stream-processing/\\#snapshotting-operator-state)"
+        },
+        {
+          "level": 4,
+          "text": "Recovery  [\\#](https://nightlies.apache.org/flink/flink-docs-release-1.20/docs/concepts/stateful-stream-processing/\\#recovery)"
+        },
+        {
+          "level": 3,
+          "text": "Unaligned Checkpointing  [\\#](https://nightlies.apache.org/flink/flink-docs-release-1.20/docs/concepts/stateful-stream-processing/\\#unaligned-checkpointing)"
+        },
+        {
+          "level": 4,
+          "text": "Unaligned Recovery  [\\#](https://nightlies.apache.org/flink/flink-docs-release-1.20/docs/concepts/stateful-stream-processing/\\#unaligned-recovery)"
+        },
+        {
+          "level": 3,
+          "text": "State Backends  [\\#](https://nightlies.apache.org/flink/flink-docs-release-1.20/docs/concepts/stateful-stream-processing/\\#state-backends)"
+        },
+        {
+          "level": 3,
+          "text": "Savepoints  [\\#](https://nightlies.apache.org/flink/flink-docs-release-1.20/docs/concepts/stateful-stream-processing/\\#savepoints)"
+        },
+        {
+          "level": 3,
+          "text": "Exactly Once vs. At Least Once  [\\#](https://nightlies.apache.org/flink/flink-docs-release-1.20/docs/concepts/stateful-stream-processing/\\#exactly-once-vs-at-least-once)"
+        },
+        {
+          "level": 2,
+          "text": "State and Fault Tolerance in Batch Programs  [\\#](https://nightlies.apache.org/flink/flink-docs-release-1.20/docs/concepts/stateful-stream-processing/\\#state-and-fault-tolerance-in-batch-programs)"
+        }
+      ]
+    }
+  },
+  {
+    "file": "concepts_time_6f68a1bd3be0e82ef39934656ae8c64cebfcdece231b3e4279f92c486b30e7fd.md",
+    "ollama_response": {
+      "slug": "timely-stream-processing",
+      "summary": "Overview of timely stream processing concepts and APIs.",
+      "headings": [
+        {
+          "level": 1,
+          "text": "Concepts"
+        },
+        {
+          "level": 2,
+          "text": "Introduction to Timely Stream Processing"
+        },
+        {
+          "level": 2,
+          "text": "Notions of Time: Event Time and Processing Time"
+        },
+        {
+          "level": 2,
+          "text": "Event Time and Watermarks"
+        },
+        {
+          "level": 3,
+          "text": "Watermarks in Parallel Streams"
+        },
+        {
+          "level": 3,
+          "text": "Lateness"
+        },
+        {
+          "level": 3,
+          "text": "Windowing"
+        }
+      ]
+    }
+  },
+  {
+    "file": "connectors_datastream_filesystem_d42a17bf4e10a68ef618eae3b1e3adb42162ef3f62db1abf80d2db8d6b932158.md",
+    "ollama_response": {
+      "slug": "filesystem",
+      "summary": "This document provides information on how to use the `FileSink` in Flink, which is a sink connector",
+      "headings": [
+        {
+          "level": 1,
+          "text": "FileSystem  [\\#](https://nightlies.apache.org/flink/flink-docs-release-1.20/docs/connectors/datastream/filesystem/\\#filesystem)"
+        },
+        {
+          "level": 2,
+          "text": "File Source  [\\#](https://nightlies.apache.org/flink/flink-docs-release-1.20/docs/connectors/datastream/filesystem/\\#file-source)"
+        },
+        {
+          "level": 4,
+          "text": "Bounded and Unbounded Streams  [\\#](https://nightlies.apache.org/flink/flink-docs-release-1.20/docs/connectors/datastream/filesystem/\\#bounded-and-unbounded-streams)"
+        },
+        {
+          "level": 3,
+          "text": "Usage  [\\#](https://nightlies.apache.org/flink/flink-docs-release-1.20/docs/connectors/datastream/filesystem/\\#usage)"
+        },
+        {
+          "level": 1,
+          "text": "reads the contents of a file from a file stream."
+        },
+        {
+          "level": 1,
+          "text": "reads batches of records from a file at a time"
+        },
+        {
+          "level": 3,
+          "text": "Format Types  [\\#](https://nightlies.apache.org/flink/flink-docs-release-1.20/docs/connectors/datastream/filesystem/\\#format-types)"
+        },
+        {
+          "level": 4,
+          "text": "TextLine Format  [\\#](https://nightlies.apache.org/flink/flink-docs-release-1.20/docs/connectors/datastream/filesystem/\\#textline-format)"
+        },
+        {
+          "level": 4,
+          "text": "SimpleStreamFormat Abstract Class  [\\#](https://nightlies.apache.org/flink/flink-docs-release-1.20/docs/connectors/datastream/filesystem/\\#simplestreamformat-abstract-class)"
+        },
+        {
+          "level": 4,
+          "text": "Bulk Format  [\\#](https://nightlies.apache.org/flink/flink-docs-release-1.20/docs/connectors/datastream/filesystem/\\#bulk-format)"
+        },
+        {
+          "level": 3,
+          "text": "Customizing File Enumeration  [\\#](https://nightlies.apache.org/flink/flink-docs-release-1.20/docs/connectors/datastream/filesystem/\\#customizing-file-enumeration)"
+        },
+        {
+          "level": 3,
+          "text": "Current Limitations  [\\#](https://nightlies.apache.org/flink/flink-docs-release-1.20/docs/connectors/datastream/filesystem/\\#current-limitations)"
+        },
+        {
+          "level": 3,
+          "text": "Behind the Scenes  [\\#](https://nightlies.apache.org/flink/flink-docs-release-1.20/docs/connectors/datastream/filesystem/\\#behind-the-scenes)"
+        },
+        {
+          "level": 2,
+          "text": "File Sink  [\\#](https://nightlies.apache.org/flink/flink-docs-release-1.20/docs/connectors/datastream/filesystem/\\#file-sink)"
+        },
+        {
+          "level": 3,
+          "text": "Format Types  [\\#](https://nightlies.apache.org/flink/flink-docs-release-1.20/docs/connectors/datastream/filesystem/\\#format-types-1)"
+        },
+        {
+          "level": 4,
+          "text": "Row-encoded Formats  [\\#](https://nightlies.apache.org/flink/flink-docs-release-1.20/docs/connectors/datastream/filesystem/\\#row-encoded-formats)"
+        },
+        {
+          "level": 4,
+          "text": "Bulk-encoded Formats  [\\#](https://nightlies.apache.org/flink/flink-docs-release-1.20/docs/connectors/datastream/filesystem/\\#bulk-encoded-formats)"
+        },
+        {
+          "level": 5,
+          "text": "Parquet format  [\\#](https://nightlies.apache.org/flink/flink-docs-release-1.20/docs/connectors/datastream/filesystem/\\#parquet-format) [Anchor link for: parquet format](https://nightlies.apache.org/flink/flink-docs-release-1.20/docs/connectors/datastream/filesystem/\\#parquet-format)"
+        },
+        {
+          "level": 1,
+          "text": "The element could be vanilla Python data structure matching the schema,"
+        },
+        {
+          "level": 1,
+          "text": "which is annotated with default Types.PICKLED_BYTE_ARRAY()"
+        },
+        {
+          "level": 1,
+          "text": "A map to indicate its Avro type info is necessary for serialization"
+        },
+        {
+          "level": 5,
+          "text": "Avro format  [\\#](https://nightlies.apache.org/flink/flink-docs-release-1.20/docs/connectors/datastream/filesystem/\\#avro-format) [Anchor link for: avro format](https://nightlies.apache.org/flink/flink-docs-release-1.20/docs/connectors/datastream/filesystem/\\#avro-format)"
+        },
+        {
+          "level": 1,
+          "text": "The element could be vanilla Python data structure matching the schema,"
+        },
+        {
+          "level": 1,
+          "text": "which is annotated with default Types.PICKLED_BYTE_ARRAY()"
+        },
+        {
+          "level": 1,
+          "text": "A map to indicate its Avro type info is necessary for serialization"
+        },
+        {
+          "level": 5,
+          "text": "ORC Format  [\\#](https://nightlies.apache.org/flink/flink-docs-release-1.20/docs/connectors/datastream/filesystem/\\#orc-format) [Anchor link for: orc format](https://nightlies.apache.org/flink/flink-docs-release-1.20/docs/connectors/datastream/filesystem/\\#orc-format)"
+        },
+        {
+          "level": 5,
+          "text": "Hadoop SequenceFile format  [\\#](https://nightlies.apache.org/flink/flink-docs-release-1.20/docs/connectors/datastream/filesystem/\\#hadoop-sequencefile-format) [Anchor link for: hadoop sequencefile format](https://nightlies.apache.org/flink/flink-docs-release-1.20/docs/connectors/datastream/filesystem/\\#hadoop-sequencefile-format)"
+        },
+        {
+          "level": 3,
+          "text": "Bucket Assignment  [\\#](https://nightlies.apache.org/flink/flink-docs-release-1.20/docs/connectors/datastream/filesystem/\\#bucket-assignment)"
+        },
+        {
+          "level": 3,
+          "text": "Rolling Policy  [\\#](https://nightlies.apache.org/flink/flink-docs-release-1.20/docs/connectors/datastream/filesystem/\\#rolling-policy)"
+        },
+        {
+          "level": 3,
+          "text": "Part file lifecycle  [\\#](https://nightlies.apache.org/flink/flink-docs-release-1.20/docs/connectors/datastream/filesystem/\\#part-file-lifecycle)"
+        },
+        {
+          "level": 4,
+          "text": "Part file configuration  [\\#](https://nightlies.apache.org/flink/flink-docs-release-1.20/docs/connectors/datastream/filesystem/\\#part-file-configuration)"
+        },
+        {
+          "level": 3,
+          "text": "Compaction  [\\#](https://nightlies.apache.org/flink/flink-docs-release-1.20/docs/connectors/datastream/filesystem/\\#compaction)"
+        },
+        {
+          "level": 3,
+          "text": "Important Considerations  [\\#](https://nightlies.apache.org/flink/flink-docs-release-1.20/docs/connectors/datastream/filesystem/\\#important-considerations)"
+        },
+        {
+          "level": 4,
+          "text": "General  [\\#](https://nightlies.apache.org/flink/flink-docs-release-1.20/docs/connectors/datastream/filesystem/\\#general)"
+        },
+        {
+          "level": 4,
+          "text": "BATCH-specific  [\\#](https://nightlies.apache.org/flink/flink-docs-release-1.20/docs/connectors/datastream/filesystem/\\#batch-specific)"
+        },
+        {
+          "level": 4,
+          "text": "S3-specific  [\\#](https://nightlies.apache.org/flink/flink-docs-release-1.20/docs/connectors/datastream/filesystem/\\#s3-specific)"
+        },
+        {
+          "level": 4,
+          "text": "OSS-specific  [\\#](https://nightlies.apache.org/flink/flink-docs-release-1.20/docs/connectors/datastream/filesystem/\\#oss-specific)"
+        }
+      ]
+    }
+  }
+]

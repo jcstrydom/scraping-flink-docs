@@ -1,0 +1,4 @@
+interface:
+  display_name: "Flink Docs Maintainer"
+  short_description: "Bootstrap and guardrails for this scraper repo"
+  default_prompt: "Use this skill to orient quickly, run standard validation, and preserve project invariants before making changes."

@@ -1,5 +1,6 @@
 import os
 import sqlite3
+from pathlib import Path
 import polars as pl
 
 # Set polars display options to show full string columns and more rows/cols
@@ -9,8 +10,13 @@ pl.Config.set_fmt_str_lengths(200)
 pl.Config.set_tbl_width_chars(200)
 
 
+# Project data locations
+SCRIPT_DIR = Path(__file__).resolve().parent
+PROJECT_ROOT = SCRIPT_DIR.parent.parent
+DATA_DIR = PROJECT_ROOT / "data"
+
 # Step 1: List all markdown files
-md_dir = os.path.join(os.path.dirname(__file__), "data", "markdown_files")
+md_dir = DATA_DIR / "markdown_files"
 md_files = [f for f in os.listdir(md_dir) if f.endswith(".md")]
 
 # Step 2: Extract page_ids from filenames
@@ -28,8 +34,8 @@ md_df = pl.DataFrame({
 })
 
 # Step 3: Read all page_ids and prefix from the DB
-db_path = os.path.join(os.path.dirname(__file__), "data", "scraping.db")
-conn = sqlite3.connect(db_path)
+db_path = DATA_DIR / "scraping.db"
+conn = sqlite3.connect(db_path.as_posix())
 cur = conn.cursor()
 cur.execute("SELECT page_id, prefix FROM pages")
 db_rows = cur.fetchall()
@@ -61,7 +67,7 @@ else:
 
 # Step 4: Remove these records from the DB
 if missing_page_ids:
-    conn = sqlite3.connect(db_path)
+    conn = sqlite3.connect(db_path.as_posix())
     cur = conn.cursor()
     # Use parameterized query for safety
     # Split into batches if very large
@@ -75,5 +81,3 @@ if missing_page_ids:
     conn.commit()
     conn.close()
     print(f"Total deleted: {len(missing_page_ids)}")
-
-

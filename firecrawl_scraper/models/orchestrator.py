@@ -175,24 +175,26 @@ class ScrapingOrchestrator:
             self.logger.debug("Response received - getting parent URL", extra={"url": normalized_url})
             parent_url = self._get_parent_url_for_url(normalized_url)
             self.logger.debug(f"Parent URL determined: {parent_url}", extra={"url": normalized_url})
+            response_data = response.model_dump()
             processed_data = self.processor.parse_raw_response(
-                response.model_dump(),
+                response_data,
                 parent_url=parent_url,
                 ask_ollama=self.ask_ollama
             )
-            
-            # Save markdown file
-            self.logger.debug(f"Data processed: Title='{processed_data.get('title', '')}', is_root_url={processed_data.get('is_root_url', False)}   ", extra={"url": normalized_url})
-            self.processor.save_markdown_file(
-                processed_data,
-                response.model_dump()['markdown']
-            )
-            self.logger.debug(f"Markdown file saved for URL: {normalized_url}", extra={"url": normalized_url})
 
             # Convert to PageMetadata and save to database
             metadata = PageMetadata.model_validate(processed_data)
             self.logger.debug(f"Metadata created for URL: Version={metadata.version}", extra={"url": normalized_url})
             metadata_dict = metadata.to_dict()
+
+            # Save markdown file using canonical metadata (including canonical page_id)
+            self.logger.debug(
+                f"Data processed: Title='{metadata_dict.get('title', '')}', is_root_url={metadata_dict.get('is_root_url', False)}",
+                extra={"url": normalized_url},
+            )
+            self.processor.save_markdown_file(metadata_dict, response_data['markdown'])
+            self.logger.debug(f"Markdown file saved for URL: {normalized_url}", extra={"url": normalized_url})
+
             self.db_manager.save_page_metadata(metadata_dict)
             self.logger.debug(f"Saved to DB @: '{self.db_manager.db_path}'", extra={"url": normalized_url})
             
