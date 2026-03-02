@@ -1,11 +1,57 @@
-<?xml version="1.0" encoding="UTF-8"?><sqlb_project><db path="scraping.db" readonly="0" foreign_keys="1" case_sensitive_like="0" temp_store="0" wal_autocheckpoint="1000" synchronous="2"/><attached/><window><main_tabs open="structure browser pragmas query" current="3"/></window><tab_structure><column_width id="0" width="300"/><column_width id="1" width="0"/><column_width id="2" width="100"/><column_width id="3" width="2150"/><column_width id="4" width="0"/><expanded_item id="0" parent="1"/><expanded_item id="1" parent="1"/><expanded_item id="2" parent="1"/><expanded_item id="3" parent="1"/></tab_structure><tab_browse><table title="pages" custom_title="0" dock_id="4" table="4,5:mainpages"/><dock_state state="000000ff00000000fd0000000100000002000007340000037bfc0100000004fb000000160064006f0063006b00420072006f007700730065003101000000000000055b0000000000000000fb000000160064006f0063006b00420072006f00770073006500320100000000ffffffff0000000000000000fb000000160064006f0063006b00420072006f007700730065003301000000000000055b0000000000000000fb000000160064006f0063006b00420072006f00770073006500340100000000000007340000011100ffffff000007340000000000000004000000040000000800000008fc00000000"/><default_encoding codec=""/><browse_table_settings/></tab_browse><tab_sql><sql name="SQL 1*">
+<?xml version="1.0" encoding="UTF-8"?><sqlb_project><db path="" readonly="0" foreign_keys="" case_sensitive_like="" temp_store="" wal_autocheckpoint="" synchronous=""/><attached/><window><main_tabs open="structure browser pragmas query" current="3"/></window><tab_structure><column_width id="0" width="300"/><column_width id="1" width="0"/><column_width id="2" width="100"/><column_width id="3" width="2150"/><column_width id="4" width="0"/></tab_structure><tab_browse><table title="." custom_title="0" dock_id="5" table="0,0:"/><dock_state state="000000ff00000000fd0000000100000002000007340000037bfc0100000005fb000000160064006f0063006b00420072006f007700730065003101000000000000055b0000000000000000fb000000160064006f0063006b00420072006f00770073006500320100000000ffffffff0000000000000000fb000000160064006f0063006b00420072006f007700730065003301000000000000055b0000000000000000fb000000160064006f0063006b00420072006f00770073006500340100000000ffffffff0000000000000000fb000000160064006f0063006b00420072006f00770073006500350100000000ffffffff0000011100ffffff000007340000000000000004000000040000000800000008fc00000000"/><default_encoding codec=""/><browse_table_settings/></tab_browse><tab_sql><sql name="SQL 1*">
 SELECT a.*
 from pages a
-limit 10
+limit 100
 ;
 
 
 
+[
+	{&quot;level&quot;: 1, &quot;text&quot;: &quot;Data Types  [\\#](https://nightlies.apache.org/flink/flink-docs-release-2.2/docs/dev/table/types/\\#data-types)&quot;},
+	{&quot;level&quot;: 2, &quot;text&quot;: &quot;Data Type  [\\#](https://nightlies.apache.org/flink/flink-docs-release-2.2/docs/dev/table/types/\\#data-type)&quot;},
+	{&quot;level&quot;: 3, &quot;text&quot;: &quot;Data Types in the Table API  [\\#](https://nightlies.apache.org/flink/flink-docs-release-2.2/docs/dev/table/types/\\#data-types-in-the-table-api)&quot;},
+	{&quot;level&quot;: 4, &quot;text&quot;: &quot;Physical Hints  [\\#](https://nightlies.apache.org/flink/flink-docs-release-2.2/docs/dev/table/types/\\#physical-hints)&quot;},
+	{&quot;level&quot;: 2, &quot;text&quot;: &quot;List of Data Types  [\\#](https://nightlies.apache.org/flink/flink-docs-release-2.2/docs/dev/table/types/\\#list-of-data-types)&quot;},
+	{&quot;level&quot;: 3, &quot;text&quot;: &quot;Character Strings  [\\#](https://nightlies.apache.org/flink/flink-docs-release-2.2/docs/dev/table/types/\\#character-strings)&quot;},
+	{&quot;level&quot;: 4, &quot;text&quot;: &quot;`CHAR` [\\#](https://nightlies.apache.org/flink/flink-docs-release-2.2/docs/dev/table/types/\\#char)&quot;},
+	{&quot;level&quot;: 4, &quot;text&quot;: &quot;`VARCHAR` / `STRING` [\\#](https://nightlies.apache.org/flink/flink-docs-release-2.2/docs/dev/table/types/\\#varchar--string)&quot;},
+	{&quot;level&quot;: 3, &quot;text&quot;: &quot;Binary Strings  [\\#](https://nightlies.apache.org/flink/flink-docs-release-2.2/docs/dev/table/types/\\#binary-strings)&quot;},
+	{&quot;level&quot;: 4, &quot;text&quot;: &quot;`BINARY` [\\#](https://nightlies.apache.org/flink/flink-docs-release-2.2/docs/dev/table/types/\\#binary)&quot;},
+	{&quot;level&quot;: 4, &quot;text&quot;: &quot;`VARBINARY` / `BYTES` [\\#](https://nightlies.apache.org/flink/flink-docs-release-2.2/docs/dev/table/types/\\#varbinary--bytes)&quot;},
+	{&quot;level&quot;: 3, &quot;text&quot;: &quot;Exact Numerics  [\\#](https://nightlies.apache.org/flink/flink-docs-release-2.2/docs/dev/table/types/\\#exact-numerics)&quot;},
+	{&quot;level&quot;: 4, &quot;text&quot;: &quot;`DECIMAL` [\\#](https://nightlies.apache.org/flink/flink-docs-release-2.2/docs/dev/table/types/\\#decimal)&quot;},
+	{&quot;level&quot;: 4, &quot;text&quot;: &quot;`TINYINT` [\\#](https://nightlies.apache.org/flink/flink-docs-release-2.2/docs/dev/table/types/\\#tinyint)&quot;},
+	{&quot;level&quot;: 4, &quot;text&quot;: &quot;`SMALLINT` [\\#](https://nightlies.apache.org/flink/flink-docs-release-2.2/docs/dev/table/types/\\#smallint)&quot;},
+	{&quot;level&quot;: 4, &quot;text&quot;: &quot;`INT` [\\#](https://nightlies.apache.org/flink/flink-docs-release-2.2/docs/dev/table/types/\\#int)&quot;},
+	{&quot;level&quot;: 4, &quot;text&quot;: &quot;`BIGINT` [\\#](https://nightlies.apache.org/flink/flink-docs-release-2.2/docs/dev/table/types/\\#bigint)&quot;},
+	{&quot;level&quot;: 3, &quot;text&quot;: &quot;Approximate Numerics  [\\#](https://nightlies.apache.org/flink/flink-docs-release-2.2/docs/dev/table/types/\\#approximate-numerics)&quot;},
+	{&quot;level&quot;: 4, &quot;text&quot;: &quot;`FLOAT` [\\#](https://nightlies.apache.org/flink/flink-docs-release-2.2/docs/dev/table/types/\\#float)&quot;},
+	{&quot;level&quot;: 4, &quot;text&quot;: &quot;`DOUBLE` [\\#](https://nightlies.apache.org/flink/flink-docs-release-2.2/docs/dev/table/types/\\#double)&quot;},
+	{&quot;level&quot;: 3, &quot;text&quot;: &quot;Date and Time  [\\#](https://nightlies.apache.org/flink/flink-docs-release-2.2/docs/dev/table/types/\\#date-and-time)&quot;},
+	{&quot;level&quot;: 4, &quot;text&quot;: &quot;`DATE` [\\#](https://nightlies.apache.org/flink/flink-docs-release-2.2/docs/dev/table/types/\\#date)&quot;},
+	{&quot;level&quot;: 4, &quot;text&quot;: &quot;`TIME` [\\#](https://nightlies.apache.org/flink/flink-docs-release-2.2/docs/dev/table/types/\\#time)&quot;},
+	{&quot;level&quot;: 4, &quot;text&quot;: &quot;`TIMESTAMP` [\\#](https://nightlies.apache.org/flink/flink-docs-release-2.2/docs/dev/table/types/\\#timestamp)&quot;},
+	{&quot;level&quot;: 4, &quot;text&quot;: &quot;`TIMESTAMP WITH TIME ZONE` [\\#](https://nightlies.apache.org/flink/flink-docs-release-2.2/docs/dev/table/types/\\#timestamp-with-time-zone)&quot;},
+	{&quot;level&quot;: 4, &quot;text&quot;: &quot;`TIMESTAMP_LTZ` [\\#](https://nightlies.apache.org/flink/flink-docs-release-2.2/docs/dev/table/types/\\#timestamp_ltz)&quot;},
+	{&quot;level&quot;: 4, &quot;text&quot;: &quot;`INTERVAL YEAR TO MONTH` [\\#](https://nightlies.apache.org/flink/flink-docs-release-2.2/docs/dev/table/types/\\#interval-year-to-month)&quot;},
+	{&quot;level&quot;: 4, &quot;text&quot;: &quot;`INTERVAL DAY TO SECOND` [\\#](https://nightlies.apache.org/flink/flink-docs-release-2.2/docs/dev/table/types/\\#interval-day-to-second)&quot;},
+	{&quot;level&quot;: 3, &quot;text&quot;: &quot;Constructured Data Types  [\\#](https://nightlies.apache.org/flink/flink-docs-release-2.2/docs/dev/table/types/\\#constructured-data-types)&quot;},
+	{&quot;level&quot;: 4, &quot;text&quot;: &quot;`ARRAY` [\\#](https://nightlies.apache.org/flink/flink-docs-release-2.2/docs/dev/table/types/\\#array)&quot;},
+	{&quot;level&quot;: 4, &quot;text&quot;: &quot;`MAP` [\\#](https://nightlies.apache.org/flink/flink-docs-release-2.2/docs/dev/table/types/\\#map)&quot;},
+	{&quot;level&quot;: 4, &quot;text&quot;: &quot;`MULTISET` [\\#](https://nightlies.apache.org/flink/flink-docs-release-2.2/docs/dev/table/types/\\#multiset)&quot;},
+	{&quot;level&quot;: 4, &quot;text&quot;: &quot;`ROW` [\\#](https://nightlies.apache.org/flink/flink-docs-release-2.2/docs/dev/table/types/\\#row)&quot;},
+	{&quot;level&quot;: 3, &quot;text&quot;: &quot;User-Defined Data Types  [\\#](https://nightlies.apache.org/flink/flink-docs-release-2.2/docs/dev/table/types/\\#user-defined-data-types)&quot;},
+	{&quot;level&quot;: 4, &quot;text&quot;: &quot;`STRUCTURED` [\\#](https://nightlies.apache.org/flink/flink-docs-release-2.2/docs/dev/table/types/\\#structured)&quot;},
+	{&quot;level&quot;: 3, &quot;text&quot;: &quot;Other Data Types  [\\#](https://nightlies.apache.org/flink/flink-docs-release-2.2/docs/dev/table/types/\\#other-data-types)&quot;},
+	{&quot;level&quot;: 4, &quot;text&quot;: &quot;`BOOLEAN` [\\#](https://nightlies.apache.org/flink/flink-docs-release-2.2/docs/dev/table/types/\\#boolean)&quot;},
+	{&quot;level&quot;: 4, &quot;text&quot;: &quot;`DESCRIPTOR` [\\#](https://nightlies.apache.org/flink/flink-docs-release-2.2/docs/dev/table/types/\\#descriptor)&quot;},
+	{&quot;level&quot;: 4, &quot;text&quot;: &quot;`VARIANT` [\\#](https://nightlies.apache.org/flink/flink-docs-release-2.2/docs/dev/table/types/\\#variant)&quot;},
+	{&quot;level&quot;: 4, &quot;text&quot;: &quot;`RAW` [\\#](https://nightlies.apache.org/flink/flink-docs-release-2.2/docs/dev/table/types/\\#raw)&quot;},
+	{&quot;level&quot;: 4, &quot;text&quot;: &quot;`NULL` [\\#](https://nightlies.apache.org/flink/flink-docs-release-2.2/docs/dev/table/types/\\#null)&quot;},
+	{&quot;level&quot;: 2, &quot;text&quot;: &quot;Casting  [\\#](https://nightlies.apache.org/flink/flink-docs-release-2.2/docs/dev/table/types/\\#casting)&quot;},
+	{&quot;level&quot;: 3, &quot;text&quot;: &quot;Legacy casting  [\\#](https://nightlies.apache.org/flink/flink-docs-release-2.2/docs/dev/table/types/\\#legacy-casting)&quot;},
+	{&quot;level&quot;: 2, &quot;text&quot;: &quot;Data Type Extraction  [\\#](https://nightlies.apache.org/flink/flink-docs-release-2.2/docs/dev/table/types/\\#data-type-extraction)&quot;}
+]
 
 
 select	 a.version
