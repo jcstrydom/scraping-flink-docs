@@ -159,5 +159,43 @@ DB class: `firecrawl_scraper/models/database.py`
 - Scraping scope defaults to the root host and `/docs/` path unless overridden with `allowed_domain` or `allow_outside_domain=True`.
 - Re-running with the same DB path resumes naturally because previously scraped URLs are loaded on init by default.
 
+## Naive KG-First RAG (Docs-Oriented)
+Initial implementation lives in `flink_rag/` and builds a lightweight docs graph plus chunk index from scraped pages.
+
+Build artifacts:
+
+```bash
+uv run python -m flink_rag.build --max-pages 30
+```
+
+Query with KG-first retrieval (nodes -> 1-hop expansion -> chunk evidence):
+
+```bash
+uv run python -m flink_rag.query "Which config options affect checkpoint latency?"
+```
+
+Artifact output path:
+- `data/rag/naive_kg_rag.json`
+
+## UI Package (Backend-Swappable)
+Interactive UI lives in `rag_ui/` as a separate package.
+
+Architecture:
+- UI/API layer depends only on `RAGBackend` protocol (`rag_ui/backend.py`).
+- Current backend is an adapter (`rag_ui/adapters.py`) over `NaiveKGRAGEngine`.
+- You can replace the backend adapter without changing UI code.
+
+Run:
+
+```bash
+uv run uvicorn rag_ui.main:app --reload --port 8000
+```
+
+Open:
+- `http://127.0.0.1:8000`
+
+Extra guide:
+- `documentation/UI_QUICKSTART.md`
+
 ## Status
 - Current docs are consolidated around the orchestrator + DB workflow in this README.

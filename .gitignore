@@ -11,3 +11,6 @@ wheels/
 
 # ENVIRONMENT VARIABLES
 .env
+
+# RAG artifacts
+data/rag/

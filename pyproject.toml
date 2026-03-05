@@ -6,6 +6,7 @@ readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
     "beautifulsoup4>=4.13.4",
+    "fastapi>=0.116.1",
     "firecrawl>=4.12.0",
     "ipykernel>=7.1.0",
     "pydantic>=2.12.5",
@@ -15,4 +16,5 @@ dependencies = [
     "polars>=1.37.1",
     "ipython>=9.8.0",
     "google-genai>=1.62.0",
+    "uvicorn>=0.35.0",
 ]

@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Flink RAG UI</title>
+  <style>
+    :root {
+      --bg: #f5efe4;
+      --paper: #fffaf2;
+      --ink: #1c1b1a;
+      --accent: #0f766e;
+      --muted: #6b6256;
+      --line: #d9ccb7;
+    }
+    body {
+      margin: 0;
+      font-family: "Source Serif 4", "Georgia", serif;
+      background: radial-gradient(circle at top right, #e8d9bd, var(--bg));
+      color: var(--ink);
+    }
+    .shell {
+      max-width: 1040px;
+      margin: 32px auto;
+      padding: 0 16px;
+    }
+    .card {
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 18px;
+      box-shadow: 0 8px 24px rgba(28, 27, 26, 0.07);
+    }
+    h1 {
+      margin: 0 0 12px;
+      font-family: "IBM Plex Sans", "Helvetica", sans-serif;
+      letter-spacing: 0.02em;
+      font-size: 1.35rem;
+    }
+    form {
+      display: grid;
+      gap: 10px;
+    }
+    textarea {
+      width: 100%;
+      min-height: 90px;
+      font: inherit;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 10px;
+      box-sizing: border-box;
+      background: #fff;
+    }
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+    }
+    .controls label {
+      font-family: "IBM Plex Sans", "Helvetica", sans-serif;
+      font-size: 0.88rem;
+      color: var(--muted);
+    }
+    .controls input {
+      width: 64px;
+      margin-left: 6px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 4px 6px;
+      background: #fff;
+    }
+    button {
+      border: 0;
+      border-radius: 10px;
+      background: var(--accent);
+      color: #fff;
+      padding: 10px 14px;
+      cursor: pointer;
+      font-family: "IBM Plex Sans", "Helvetica", sans-serif;
+      font-weight: 600;
+    }
+    .panel {
+      margin-top: 16px;
+      display: grid;
+      gap: 12px;
+    }
+    .item {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 12px;
+      background: #fff;
+    }
+    .muted {
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+    a { color: #0b4f49; }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <section class="card">
+      <h1>Flink Docs RAG</h1>
+      <form id="query-form">
+        <textarea id="question" placeholder="Ask a Flink docs question..."></textarea>
+        <div class="controls">
+          <label>Top nodes <input id="top_nodes" type="number" min="1" max="30" value="6" /></label>
+          <label>Top chunks <input id="top_chunks" type="number" min="1" max="30" value="6" /></label>
+          <label>Hops <input id="hops" type="number" min="0" max="2" value="1" /></label>
+          <button type="submit">Query</button>
+        </div>
+      </form>
+    </section>
+
+    <section class="card panel">
+      <div>
+        <h1>Anchor Nodes</h1>
+        <div id="nodes" class="muted">No query yet.</div>
+      </div>
+      <div>
+        <h1>Evidence</h1>
+        <div id="evidence" class="muted">No query yet.</div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const form = document.getElementById('query-form');
+    const nodesEl = document.getElementById('nodes');
+    const evidenceEl = document.getElementById('evidence');
+
+    function esc(text) {
+      return String(text)
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;');
+    }
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const question = document.getElementById('question').value.trim();
+      if (!question) return;
+
+      nodesEl.textContent = 'Loading...';
+      evidenceEl.textContent = 'Loading...';
+
+      try {
+        const resp = await fetch('/api/query', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({
+            question,
+            top_nodes: Number(document.getElementById('top_nodes').value || 6),
+            top_chunks: Number(document.getElementById('top_chunks').value || 6),
+            hops: Number(document.getElementById('hops').value || 1),
+          }),
+        });
+
+        if (!resp.ok) {
+          const txt = await resp.text();
+          throw new Error(txt || 'Request failed');
+        }
+
+        const data = await resp.json();
+        if (!data.nodes.length) {
+          nodesEl.innerHTML = '<div class="muted">No anchor nodes.</div>';
+        } else {
+          nodesEl.innerHTML = data.nodes.map((n) =>
+            `<div class="item"><strong>${esc(n.label)}</strong><div class="muted">${esc(n.node_type)} | ${esc(n.node_id)}</div></div>`
+          ).join('');
+        }
+
+        if (!data.evidence.length) {
+          evidenceEl.innerHTML = '<div class="muted">No evidence chunks.</div>';
+        } else {
+          evidenceEl.innerHTML = data.evidence.map((c) =>
+            `<article class="item">
+              <div><strong>${esc(c.heading)}</strong></div>
+              <div class="muted">score: ${Number(c.score).toFixed(4)}</div>
+              <p>${esc(c.text)}</p>
+              <a href="${esc(c.url)}" target="_blank" rel="noreferrer">source</a>
+            </article>`
+          ).join('');
+        }
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        nodesEl.innerHTML = `<div class="muted">Error: ${esc(msg)}</div>`;
+        evidenceEl.innerHTML = '';
+      }
+    });
+  </script>
+</body>
+</html>
