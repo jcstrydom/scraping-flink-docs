@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Callable
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
@@ -36,13 +37,40 @@ class QueryResponse(BaseModel):
     evidence: list[EvidenceResponse]
 
 
-def create_app(backend: RAGBackend) -> FastAPI:
+def create_app(backend: RAGBackend | Callable[[], RAGBackend]) -> FastAPI:
     app = FastAPI(title="RAG UI", version="0.1.0")
     static_dir = Path(__file__).resolve().parent / "static"
+    backend_instance: RAGBackend | None = None
+    backend_error: str | None = None
+
+    def resolve_backend() -> RAGBackend:
+        nonlocal backend_instance, backend_error
+        if backend_instance is not None:
+            return backend_instance
+        if backend_error is not None:
+            raise RuntimeError(backend_error)
+
+        try:
+            if hasattr(backend, "query"):
+                backend_instance = backend
+            else:
+                backend_instance = backend()
+        except Exception as exc:
+            backend_error = f"{type(exc).__name__}: {exc}"
+            raise RuntimeError(backend_error) from exc
+        return backend_instance
 
     @app.get("/health")
     def health() -> dict[str, str]:
         return {"status": "ok"}
+
+    @app.get("/api/status")
+    def backend_status() -> dict[str, str | bool]:
+        try:
+            resolve_backend()
+            return {"ready": True, "error": ""}
+        except Exception as exc:
+            return {"ready": False, "error": str(exc)}
 
     @app.get("/")
     def index() -> FileResponse:
@@ -51,7 +79,15 @@ def create_app(backend: RAGBackend) -> FastAPI:
     @app.post("/api/query", response_model=QueryResponse)
     def query(request: QueryRequest) -> QueryResponse:
         try:
-            result = backend.query(
+            resolved_backend = resolve_backend()
+        except Exception as exc:
+            raise HTTPException(
+                status_code=503,
+                detail=f"Backend unavailable. Build/check artifact and backend config. Cause: {exc}",
+            ) from exc
+
+        try:
+            result = resolved_backend.query(
                 question=request.question,
                 top_nodes=request.top_nodes,
                 top_chunks=request.top_chunks,

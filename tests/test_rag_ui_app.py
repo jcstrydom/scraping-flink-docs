@@ -39,6 +39,13 @@ def test_health_and_index_route():
     assert "query-form" in index.text
 
 
+def test_api_status_ready():
+    client = TestClient(create_app(FakeBackend()))
+    resp = client.get("/api/status")
+    assert resp.status_code == 200
+    assert resp.json()["ready"] is True
+
+
 def test_api_query_success():
     client = TestClient(create_app(FakeBackend()))
 
@@ -70,3 +77,13 @@ def test_api_query_backend_error_is_500():
 
     assert resp.status_code == 500
     assert "Backend query failed" in resp.json()["detail"]
+
+
+def test_api_query_unavailable_backend_is_503():
+    def broken_factory():
+        raise FileNotFoundError("missing graph file")
+
+    client = TestClient(create_app(broken_factory))
+    resp = client.post("/api/query", json={"question": "valid question"})
+    assert resp.status_code == 503
+    assert "Backend unavailable" in resp.json()["detail"]

@@ -4,4 +4,4 @@ from .adapters import NaiveKGRAGBackend
 from .app import create_app
 
 
-app = create_app(NaiveKGRAGBackend())
+app = create_app(lambda: NaiveKGRAGBackend())

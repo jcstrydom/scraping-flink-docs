@@ -46,6 +46,10 @@ uv run uvicorn rag_ui.main:app --reload --port 8000
 Open:
 - `http://127.0.0.1:8000`
 
+Health/readiness checks:
+- `GET /health` (app alive)
+- `GET /api/status` (backend ready + error details if not)
+
 ## Tests
 ```bash
 uv run --with pytest python -m pytest -q tests/test_rag_ui_app.py tests/test_rag_ui_adapter.py tests/test_rag_ui_static.py
