@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from .adapters import NaiveKGRAGBackend
+from .adapters import DualRAGBackend
 from .app import create_app
 
 
-app = create_app(lambda: NaiveKGRAGBackend())
+app = create_app(lambda: DualRAGBackend())

@@ -5,7 +5,14 @@ from rag_ui.backend import BackendQueryResult, EvidenceItem, NodeItem
 
 
 class FakeBackend:
-    def query(self, question: str, top_nodes: int = 6, top_chunks: int = 6, hops: int = 1) -> BackendQueryResult:
+    def query(
+        self,
+        question: str,
+        top_nodes: int = 6,
+        top_chunks: int = 6,
+        hops: int = 1,
+        mode: str = "naive",
+    ) -> BackendQueryResult:
         return BackendQueryResult(
             question=question,
             nodes=[NodeItem(node_id="concept:checkpoint", node_type="concept", label="checkpoint")],
@@ -22,7 +29,14 @@ class FakeBackend:
 
 
 class ErrorBackend:
-    def query(self, question: str, top_nodes: int = 6, top_chunks: int = 6, hops: int = 1):
+    def query(
+        self,
+        question: str,
+        top_nodes: int = 6,
+        top_chunks: int = 6,
+        hops: int = 1,
+        mode: str = "naive",
+    ):
         raise RuntimeError("boom")
 
 
@@ -44,6 +58,7 @@ def test_api_status_ready():
     resp = client.get("/api/status")
     assert resp.status_code == 200
     assert resp.json()["ready"] is True
+    assert resp.json()["modes"] == "naive,kg"
 
 
 def test_api_query_success():
@@ -51,12 +66,13 @@ def test_api_query_success():
 
     resp = client.post(
         "/api/query",
-        json={"question": "How do checkpoints affect latency?", "top_nodes": 4, "top_chunks": 4, "hops": 1},
+        json={"question": "How do checkpoints affect latency?", "mode": "naive", "top_nodes": 4, "top_chunks": 4, "hops": 1},
     )
 
     assert resp.status_code == 200
     body = resp.json()
     assert body["question"] == "How do checkpoints affect latency?"
+    assert body["mode"] == "naive"
     assert len(body["nodes"]) == 1
     assert len(body["evidence"]) == 1
     assert body["nodes"][0]["node_type"] == "concept"

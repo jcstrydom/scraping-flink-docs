@@ -159,8 +159,8 @@ DB class: `firecrawl_scraper/models/database.py`
 - Scraping scope defaults to the root host and `/docs/` path unless overridden with `allowed_domain` or `allow_outside_domain=True`.
 - Re-running with the same DB path resumes naturally because previously scraped URLs are loaded on init by default.
 
-## Naive KG-First RAG (Docs-Oriented)
-Initial implementation lives in `flink_rag/` and builds a lightweight docs graph plus chunk index from scraped pages.
+## Naive RAG + Optional KG Mode (Docs-Oriented)
+Implementation lives in `flink_rag/` and builds a lightweight docs graph plus chunk index from scraped pages.
 
 Build artifacts:
 
@@ -168,21 +168,40 @@ Build artifacts:
 uv run python -m flink_rag.build --max-pages 30
 ```
 
-Query with KG-first retrieval (nodes -> 1-hop expansion -> chunk evidence):
+This writes:
+- `data/rag/naive_rag.json`
+- `data/rag/kg_rag.json`
+- `data/rag/evals/latest.json` (automatic scoring run over eval questions)
+
+Query with the default chunk-only baseline:
 
 ```bash
 uv run python -m flink_rag.query "Which config options affect checkpoint latency?"
 ```
 
+Query with KG-assisted mode (optional):
+
+```bash
+uv run python -m flink_rag.query --mode kg "Which config options affect checkpoint latency?"
+```
+
+Run evaluation only (without rebuilding):
+
+```bash
+uv run python -m flink_rag.eval
+```
+
 Artifact output path:
-- `data/rag/naive_kg_rag.json`
+- `data/rag/naive_rag.json`
+- `data/rag/kg_rag.json`
 
 ## UI Package (Backend-Swappable)
 Interactive UI lives in `rag_ui/` as a separate package.
 
 Architecture:
 - UI/API layer depends only on `RAGBackend` protocol (`rag_ui/backend.py`).
-- Current backend is an adapter (`rag_ui/adapters.py`) over `NaiveKGRAGEngine`.
+- Default backend is a dual adapter (`rag_ui/adapters.py`) that can route to chunk-only `NaiveRAGEngine` or `NaiveKGRAGEngine`.
+- UI includes a mode toggle so you can switch between naive and KG-assisted retrieval.
 - You can replace the backend adapter without changing UI code.
 
 Run:

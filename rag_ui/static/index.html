@@ -70,6 +70,14 @@
       padding: 4px 6px;
       background: #fff;
     }
+    .controls select {
+      margin-left: 6px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 4px 6px;
+      background: #fff;
+      font: inherit;
+    }
     button {
       border: 0;
       border-radius: 10px;
@@ -105,6 +113,12 @@
       <form id="query-form">
         <textarea id="question" placeholder="Ask a Flink docs question..."></textarea>
         <div class="controls">
+          <label>Mode
+            <select id="mode">
+              <option value="naive" selected>Naive</option>
+              <option value="kg">KG-assisted</option>
+            </select>
+          </label>
           <label>Top nodes <input id="top_nodes" type="number" min="1" max="30" value="6" /></label>
           <label>Top chunks <input id="top_chunks" type="number" min="1" max="30" value="6" /></label>
           <label>Hops <input id="hops" type="number" min="0" max="2" value="1" /></label>
@@ -127,6 +141,9 @@
 
   <script>
     const form = document.getElementById('query-form');
+    const modeEl = document.getElementById('mode');
+    const topNodesEl = document.getElementById('top_nodes');
+    const hopsEl = document.getElementById('hops');
     const nodesEl = document.getElementById('nodes');
     const evidenceEl = document.getElementById('evidence');
 
@@ -136,6 +153,15 @@
         .replaceAll('<', '&lt;')
         .replaceAll('>', '&gt;');
     }
+
+    function syncControls() {
+      const isKG = modeEl.value === 'kg';
+      topNodesEl.disabled = !isKG;
+      hopsEl.disabled = !isKG;
+    }
+
+    modeEl.addEventListener('change', syncControls);
+    syncControls();
 
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -151,9 +177,10 @@
           headers: {'Content-Type': 'application/json'},
           body: JSON.stringify({
             question,
-            top_nodes: Number(document.getElementById('top_nodes').value || 6),
+            mode: modeEl.value,
+            top_nodes: Number(topNodesEl.value || 6),
             top_chunks: Number(document.getElementById('top_chunks').value || 6),
-            hops: Number(document.getElementById('hops').value || 1),
+            hops: Number(hopsEl.value || 1),
           }),
         });
 
@@ -164,7 +191,11 @@
 
         const data = await resp.json();
         if (!data.nodes.length) {
-          nodesEl.innerHTML = '<div class="muted">No anchor nodes.</div>';
+          if (data.mode === 'naive') {
+            nodesEl.innerHTML = '<div class="muted">Naive mode does not use anchor nodes.</div>';
+          } else {
+            nodesEl.innerHTML = '<div class="muted">No anchor nodes.</div>';
+          }
         } else {
           nodesEl.innerHTML = data.nodes.map((n) =>
             `<div class="item"><strong>${esc(n.label)}</strong><div class="muted">${esc(n.node_type)} | ${esc(n.node_id)}</div></div>`

@@ -30,5 +30,12 @@ class BackendQueryResult:
 class RAGBackend(Protocol):
     """Stable query contract the UI depends on."""
 
-    def query(self, question: str, top_nodes: int = 6, top_chunks: int = 6, hops: int = 1) -> BackendQueryResult:
+    def query(
+        self,
+        question: str,
+        top_nodes: int = 6,
+        top_chunks: int = 6,
+        hops: int = 1,
+        mode: str = "naive",
+    ) -> BackendQueryResult:
         ...

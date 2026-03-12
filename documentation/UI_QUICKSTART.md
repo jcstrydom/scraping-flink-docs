@@ -4,15 +4,16 @@
 The UI is separated from RAG internals through a backend contract:
 - UI depends on `RAGBackend` protocol only.
 - Backend adapters map any engine output into stable UI response objects.
+- A mode toggle in the UI routes queries to naive or KG-assisted retrieval.
 
 This keeps UX stable when replacing RAG implementations.
 
 ## Package Layout
 - `rag_ui/backend.py`: backend protocol + data contract.
-- `rag_ui/adapters.py`: adapter for current `NaiveKGRAGEngine`.
+- `rag_ui/adapters.py`: naive and KG adapters plus `DualRAGBackend` router.
 - `rag_ui/app.py`: FastAPI app (routes + API schema).
 - `rag_ui/static/index.html`: frontend UI.
-- `rag_ui/main.py`: default app entrypoint.
+- `rag_ui/main.py`: default app entrypoint using `DualRAGBackend`.
 
 ## Swapping Backends (No UI Changes)
 Implement the `RAGBackend` protocol and pass it to `create_app()`:
@@ -33,7 +34,7 @@ app = create_app(MyBackend())
 ```
 
 ## Run
-Make sure a graph artifact exists:
+Build artifacts first (this also runs evaluation automatically):
 ```bash
 uv run python -m flink_rag.build --max-pages 30
 ```

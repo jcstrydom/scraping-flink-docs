@@ -7,6 +7,7 @@ def test_static_index_contains_expected_ids():
 
     assert "id=\"query-form\"" in html
     assert "id=\"question\"" in html
+    assert "id=\"mode\"" in html
     assert "id=\"nodes\"" in html
     assert "id=\"evidence\"" in html
     assert "/api/query" in html

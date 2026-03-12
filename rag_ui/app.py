@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from pathlib import Path
+from typing import Literal
 
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse
@@ -12,6 +13,7 @@ from .backend import RAGBackend
 
 class QueryRequest(BaseModel):
     question: str = Field(min_length=2, max_length=2000)
+    mode: Literal["naive", "kg"] = "naive"
     top_nodes: int = Field(default=6, ge=1, le=30)
     top_chunks: int = Field(default=6, ge=1, le=30)
     hops: int = Field(default=1, ge=0, le=2)
@@ -33,6 +35,7 @@ class EvidenceResponse(BaseModel):
 
 class QueryResponse(BaseModel):
     question: str
+    mode: Literal["naive", "kg"]
     nodes: list[NodeResponse]
     evidence: list[EvidenceResponse]
 
@@ -68,7 +71,7 @@ def create_app(backend: RAGBackend | Callable[[], RAGBackend]) -> FastAPI:
     def backend_status() -> dict[str, str | bool]:
         try:
             resolve_backend()
-            return {"ready": True, "error": ""}
+            return {"ready": True, "error": "", "modes": "naive,kg"}
         except Exception as exc:
             return {"ready": False, "error": str(exc)}
 
@@ -92,12 +95,14 @@ def create_app(backend: RAGBackend | Callable[[], RAGBackend]) -> FastAPI:
                 top_nodes=request.top_nodes,
                 top_chunks=request.top_chunks,
                 hops=request.hops,
+                mode=request.mode,
             )
         except Exception as exc:
             raise HTTPException(status_code=500, detail=f"Backend query failed: {exc}") from exc
 
         return QueryResponse(
             question=result.question,
+            mode=request.mode,
             nodes=[
                 NodeResponse(node_id=node.node_id, node_type=node.node_type, label=node.label)
                 for node in result.nodes
